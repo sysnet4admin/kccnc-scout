@@ -91,3 +91,12 @@ test('the prompt gives the attendee zone and each walk', async () => {
   assert.match(user.content, /Attendee is at: Expo halls/);
   assert.match(user.content, /Walk: 11 min, arriving 14:31, before it starts/);
 });
+
+test('answers with a zone are cached per minute, so walk times stay current', () => {
+  const at = Date.parse('2026-11-10T14:20:00-07:00');
+  assert.equal(cacheKey('q', at, 'expo'), cacheKey('q', at + 59_000, 'expo'));
+  // Four minutes later the arrival time and lateness differ, so it must miss.
+  assert.notEqual(cacheKey('q', at, 'expo'), cacheKey('q', at + 4 * 60_000, 'expo'));
+  // Without a zone there are no walk times, and the 5-minute slot stays.
+  assert.equal(cacheKey('q', at), cacheKey('q', at + 4 * 60_000));
+});
