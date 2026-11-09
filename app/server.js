@@ -14,7 +14,7 @@ const sessions = [
   { id: 4, time: '17:30', room: 'Main', title: 'Submissions close' },
 ];
 
-const server = http.createServer((req, res) => {
+function handle(req, res) {
   let url;
   try {
     url = new URL(req.url, 'http://localhost');
@@ -37,9 +37,20 @@ const server = http.createServer((req, res) => {
   }
   res.writeHead(404, { 'content-type': 'text/plain' });
   res.end('not found\n');
-});
+}
 
-server.listen(port, () => console.log(`listening on :${port}, version ${version}`));
+function createServer() {
+  return http.createServer(handle);
+}
 
-// Exit cleanly when Kubernetes stops the pod, so rollouts don't drop requests.
-process.on('SIGTERM', () => server.close(() => process.exit(0)));
+// Listen only when run as the app (`node server.js`), so tests can start
+// their own server on a free port.
+if (require.main === module) {
+  const server = createServer();
+  server.listen(port, () => console.log(`listening on :${port}, version ${version}`));
+
+  // Exit cleanly when Kubernetes stops the pod, so rollouts don't drop requests.
+  process.on('SIGTERM', () => server.close(() => process.exit(0)));
+}
+
+module.exports = { createServer };
