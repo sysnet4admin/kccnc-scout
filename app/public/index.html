@@ -104,8 +104,9 @@
   let controller = null;
 
   const params = new URLSearchParams(location.search);
-  if (params.get('at')) {
-    const custom = params.get('at');
+  const custom = params.get('at');
+  const ok = custom && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:\d{2})$/.test(custom) && !Number.isNaN(Date.parse(custom));
+  if (ok) {
     if (![...atSelect.options].some((o) => o.value === custom)) atSelect.add(new Option(fmtDayTime.format(new Date(custom)), custom));
     atSelect.value = custom;
   }
@@ -227,6 +228,7 @@
             if (text.dataset.waiting) { text.textContent = ''; delete text.dataset.waiting; }
             text.textContent += data.text;
           } else if (event === 'notice' || event === 'error') {
+            if (!answerBox.isConnected) { status.textContent = data.message; continue; }
             text.textContent = data.message;
             delete text.dataset.waiting;
           } else if (event === 'done' && text.dataset.waiting) {
