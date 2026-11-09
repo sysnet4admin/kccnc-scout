@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>kccnc-scout</title>
+<meta name="description" content="Find the right KubeCon + CloudNativeCon North America 2026 talk, from what is on the slides, in any language.">
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --text: #1d1d1f; --muted: #5f6368; --line: #e3e3e0;
+    --accent: #0b6bcb; --accent-soft: #e8f1fb; --live: #0a7a3d; --soon: #a15c00; --past: #8a8a8a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121214; --card: #1c1c1f; --text: #ececec; --muted: #a0a0a6; --line: #2c2c31;
+      --accent: #6aa9ff; --accent-soft: #1b2a3d; --live: #4cc38a; --soon: #f0b35a; --past: #8a8a90;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 12px 16px 40px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  h1 { font-size: 20px; margin: 4px 0; }
+  .clock { color: var(--muted); font-size: 14px; white-space: nowrap; }
+  .tagline { color: var(--muted); font-size: 14px; margin: 0 0 12px; }
+  form { display: flex; gap: 8px; }
+  input[type=search] { flex: 1; min-width: 0; font-size: 17px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--text); }
+  button { font-size: 16px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; }
+  button:disabled { opacity: .5; }
+  .time-row { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; font-size: 14px; color: var(--muted); }
+  .time-row select { font-size: 14px; padding: 4px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+  .examples { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+  .examples button { background: var(--accent-soft); color: var(--accent); font-size: 13px; padding: 6px 10px; border-radius: 16px; text-align: left; }
+  .answer { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 14px 0; white-space: pre-wrap; }
+  .answer .label { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 4px; white-space: normal; }
+  .status { color: var(--muted); font-size: 14px; margin: 8px 0; }
+  .searched { color: var(--muted); font-size: 13px; margin-top: 6px; white-space: normal; }
+  h2 { font-size: 15px; margin: 18px 0 8px; color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin: 8px 0; }
+  .card h3 { font-size: 16px; margin: 0 0 4px; }
+  .card h3 a { color: inherit; }
+  .meta { font-size: 14px; color: var(--muted); }
+  .badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 10px; margin-right: 6px; }
+  .badge.live { color: var(--live); border: 1px solid var(--live); }
+  .badge.soon { color: var(--soon); border: 1px solid var(--soon); }
+  .badge.later { color: var(--muted); border: 1px solid var(--line); }
+  .badge.past { color: var(--past); border: 1px solid var(--line); }
+  .pages { margin: 8px 0 0; padding: 0; list-style: none; font-size: 14px; }
+  .pages li { margin: 4px 0; }
+  .ai { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 0 4px; margin-left: 4px; }
+  details { font-size: 14px; margin-top: 6px; }
+  summary { color: var(--accent); cursor: pointer; }
+  footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
+  footer p { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>kccnc-scout</h1>
+    <span class="clock" id="clock"></span>
+  </header>
+  <p class="tagline">Ask in any language which KubeCon talk to go to. Picks are based on what is on the slides.</p>
+
+  <form id="ask">
+    <input type="search" id="q" name="q" maxlength="300" autocomplete="off" enterkeyhint="search" placeholder="Ask in any language..." aria-label="Your question">
+    <button type="submit" id="go">Ask</button>
+  </form>
+
+  <div class="time-row">
+    <label for="at">As of</label>
+    <select id="at">
+      <option value="">right now</option>
+      <option value="2026-11-10T10:40:00-07:00">Tue 10:40</option>
+      <option value="2026-11-10T14:20:00-07:00">Tue 14:20</option>
+      <option value="2026-11-11T11:30:00-07:00">Wed 11:30</option>
+      <option value="2026-11-11T14:20:00-07:00">Wed 14:20</option>
+      <option value="2026-11-12T10:30:00-07:00">Thu 10:30</option>
+    </select>
+  </div>
+
+  <div class="examples" id="examples">
+    <button type="button">지금 eBPF로 보안하는 실제 사례 발표 뭐 있어?</button>
+    <button type="button">Is there a beginner talk that shows how a quickstart goes wrong?</button>
+    <button type="button">初心者向けのOpenTelemetryの発表はある？</button>
+    <button type="button">¿Alguna charla con demo en vivo sobre GPUs en Kubernetes?</button>
+  </div>
+
+  <div id="out"></div>
+
+  <footer>
+    <p>Slide descriptions were generated by AI from the slides speakers uploaded, before and during the event. They can be wrong; open the slide page to check.</p>
+    <p>Built with Claude Code. Times are venue time (MST).</p>
+    <p>version __VERSION__</p>
+  </footer>
+</main>
+<script>
+(() => {
+  const TZ = 'America/Denver';
+  const fmtDayTime = new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+  const fmtTime = new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false });
+  const $ = (id) => document.getElementById(id);
+  const form = $('ask'), input = $('q'), go = $('go'), atSelect = $('at'), out = $('out'), clock = $('clock');
+  let controller = null;
+
+  const params = new URLSearchParams(location.search);
+  if (params.get('at')) {
+    const custom = params.get('at');
+    if (![...atSelect.options].some((o) => o.value === custom)) atSelect.add(new Option(fmtDayTime.format(new Date(custom)), custom));
+    atSelect.value = custom;
+  }
+
+  function tick() {
+    const at = atSelect.value;
+    clock.textContent = `${fmtDayTime.format(at ? new Date(at) : new Date())} MST${at ? ' (demo)' : ''}`;
+  }
+  tick();
+  setInterval(tick, 30_000);
+  atSelect.addEventListener('change', tick);
+
+  function el(tag, attrs = {}, ...children) {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v === undefined || v === null || v === false) continue;
+      if (k === 'class') node.className = v; else node.setAttribute(k, v);
+    }
+    for (const c of children) if (c !== null && c !== undefined && c !== false) node.append(c);
+    return node;
+  }
+  const safeLink = (url) => (typeof url === 'string' && /^https?:\/\//.test(url) ? url : null);
+
+  function when(card) {
+    if (card.status === 'live') return ['live', `on now, ${card.minutesLeft} min left`];
+    if (card.status === 'soon') return ['soon', `in ${card.startsInMinutes} min`];
+    if (card.status === 'past') return ['past', 'over'];
+    return ['later', 'later'];
+  }
+
+  function cardNode(card) {
+    const [cls, label] = when(card);
+    const slides = safeLink(card.slides);
+    const title = slides ? el('a', { href: slides, target: '_blank', rel: 'noopener' }, card.title) : card.title;
+    const time = `${fmtDayTime.format(new Date(card.start))}-${fmtTime.format(new Date(card.end))}`;
+    const place = [card.room, card.floor, card.venue].filter(Boolean).join(', ');
+    const facts = [card.level, card.track].filter(Boolean).join(', ');
+    const node = el('div', { class: 'card' },
+      el('h3', {}, title),
+      el('div', { class: 'meta' }, el('span', { class: `badge ${cls}` }, label), time),
+      place && el('div', { class: 'meta' }, place),
+      facts && el('div', { class: 'meta' }, facts),
+      card.speakers?.length && el('div', { class: 'meta' }, card.speakers.join(', ')),
+    );
+    if (card.pages?.length) {
+      const list = el('ul', { class: 'pages' });
+      for (const p of card.pages) {
+        const link = safeLink(p.link);
+        list.append(el('li', {}, link ? el('a', { href: link, target: '_blank', rel: 'noopener' }, `Slides p.${p.page}`) : `p.${p.page}`, el('span', { class: 'ai' }, 'AI-read'), ` ${p.summary || ''}`));
+      }
+      node.append(list);
+    } else if (!slides) {
+      node.append(el('div', { class: 'meta' }, 'No slides uploaded yet.'));
+    }
+    if (card.deckSummary) node.append(el('details', {}, el('summary', {}, 'About these slides'), el('p', {}, card.deckSummary, el('span', { class: 'ai' }, 'AI-read'))));
+    return node;
+  }
+
+  function renderResults(result, answerBox) {
+    const sections = [
+      ['On now or starting soon', result.now],
+      ['Later', result.later],
+      ['Already over: slides now, recordings later', result.past],
+    ];
+    const searched = result.searched?.translated ? `Searched in English: "${result.searched.english}"` : null;
+    if (searched) answerBox.append(el('div', { class: 'searched' }, searched));
+    for (const [name, cards] of sections) {
+      if (!cards?.length) continue;
+      out.append(el('h2', {}, name));
+      for (const c of cards) out.append(cardNode(c));
+    }
+    if (!result.now.length && !result.later.length && !result.past.length) out.append(el('p', { class: 'status' }, 'No talks matched. Try other words.'));
+  }
+
+  async function ask(question) {
+    if (controller) controller.abort();
+    controller = new AbortController();
+    out.replaceChildren();
+    const status = el('p', { class: 'status' }, 'Searching talks and slides...');
+    const text = el('span');
+    const answerBox = el('div', { class: 'answer' }, el('div', { class: 'label' }, 'AI answer'), text);
+    out.append(status);
+    go.disabled = true;
+
+    const url = new URL('/api/answer', location.origin);
+    url.searchParams.set('q', question);
+    if (atSelect.value) url.searchParams.set('at', atSelect.value);
+    const shown = new URL(location.href);
+    shown.searchParams.set('q', question);
+    if (atSelect.value) shown.searchParams.set('at', atSelect.value); else shown.searchParams.delete('at');
+    history.replaceState(null, '', shown);
+
+    try {
+      const res = await fetch(url, { signal: controller.signal, headers: { accept: 'text/event-stream' } });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        status.textContent = body.error || `Something went wrong (${res.status}).`;
+        return;
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let i;
+        while ((i = buffer.indexOf('\n\n')) >= 0) {
+          const block = buffer.slice(0, i);
+          buffer = buffer.slice(i + 2);
+          const event = (block.match(/^event: (.+)$/m) || [])[1];
+          const data = JSON.parse((block.match(/^data: (.+)$/m) || [])[1] || 'null');
+          if (event === 'results') {
+            status.replaceWith(answerBox);
+            text.textContent = 'Writing an answer...';
+            text.dataset.waiting = '1';
+            renderResults(data, answerBox);
+          } else if (event === 'delta') {
+            if (text.dataset.waiting) { text.textContent = ''; delete text.dataset.waiting; }
+            text.textContent += data.text;
+          } else if (event === 'notice' || event === 'error') {
+            text.textContent = data.message;
+            delete text.dataset.waiting;
+          } else if (event === 'done' && text.dataset.waiting) {
+            text.textContent = 'See the talks below.';
+          }
+        }
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') status.textContent = 'Could not reach the server. Try again.';
+    } finally {
+      go.disabled = false;
+    }
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = input.value.trim();
+    if (q) ask(q);
+  });
+  $('examples').addEventListener('click', (e) => {
+    if (e.target.tagName !== 'BUTTON') return;
+    input.value = e.target.textContent;
+    ask(input.value);
+  });
+  if (params.get('q')) {
+    input.value = params.get('q');
+    ask(input.value);
+  }
+})();
+</script>
+</body>
+</html>

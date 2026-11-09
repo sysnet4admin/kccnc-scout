@@ -1,7 +1,9 @@
-// A tiny conference schedule service. Replace it with your own app: keep
-// listening on $PORT and keep /healthz and /readyz, and the manifests in
-// deploy/ keep working.
+// kccnc-scout: the phone UI at /, the search and answer APIs, and the
+// starter's probes and /api/sessions (kept for its version field). Keep
+// listening on $PORT and keep /healthz and /readyz so deploy/ keeps working.
+const fs = require('node:fs');
 const http = require('node:http');
+const path = require('node:path');
 const log = require('./lib/log');
 const { routeFor, nameRoute, shutdownTelemetry } = require('./lib/telemetry');
 const { getClient } = require('./lib/es');
@@ -15,8 +17,11 @@ const envInt = (name, fallback) => {
 };
 
 const port = Number(process.env.PORT || 8080);
-const team = process.env.TEAM_NAME || 'your-team';
 const version = process.env.APP_VERSION || 'dev';
+
+// The phone UI: one static page that calls /api/answer. The footer shows the
+// running version, which the deploy checks read.
+const homePage = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8').replace('__VERSION__', version);
 
 const sessions = [
   { id: 1, time: '10:00', room: 'Main', title: 'Kickoff and sponsor talks' },
@@ -165,9 +170,8 @@ function handle(req, res, client, p) {
     });
   }
   if (url.pathname === '/') {
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    const rows = sessions.map((s) => `<li>${s.time} · ${s.room} · ${s.title}</li>`).join('');
-    return res.end(`<!doctype html><title>${team}</title><h1>${team}</h1><p>version ${version}</p><ul>${rows}</ul>`);
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' });
+    return res.end(homePage);
   }
   res.writeHead(404, { 'content-type': 'text/plain' });
   res.end('not found\n');
