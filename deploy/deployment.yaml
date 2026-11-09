@@ -25,6 +25,21 @@ spec:
           env:
             - name: TEAM_NAME
               value: "kccnc-scout"
+            # Elasticsearch: URL and read-only key from Secret `elastic`
+            # (created outside git), and the inference endpoint that rewrites
+            # questions as English search queries.
+            - name: ES_URL
+              valueFrom:
+                secretKeyRef:
+                  name: elastic
+                  key: url
+            - name: ES_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: elastic
+                  key: api-key
+            - name: ES_TRANSLATE_ENDPOINT
+              value: kccnc-scout-claude-haiku
             # OpenTelemetry to Dash0. $(VAR) only expands variables defined
             # above it in this list, so keep this order.
             - name: K8S_POD_NAME

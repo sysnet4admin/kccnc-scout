@@ -38,6 +38,17 @@ test('sessions API returns JSON with a sessions list', async () => {
   assert.ok(Array.isArray(body.sessions));
 });
 
+test('search requests are limited per IP', async () => {
+  for (let i = 0; i < 20; i++) {
+    const res = await fetch(base + '/api/search?q=conference');
+    assert.equal(res.status, 503);
+  }
+
+  const res = await fetch(base + '/api/search?q=conference');
+  assert.equal(res.status, 429);
+  assert.deepEqual(await res.json(), { error: 'too many requests' });
+});
+
 test('unknown paths return 404', async () => {
   const res = await fetch(base + '/no-such-page');
   assert.equal(res.status, 404);

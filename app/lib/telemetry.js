@@ -7,7 +7,7 @@ const INSTRUMENTATION = path.join(__dirname, '..', 'instrumentation.js');
 
 // Routes we name in traces. The plain http module only knows the method, so
 // without this every server span would be called "GET".
-const ROUTES = new Set(['/', '/healthz', '/readyz', '/api/sessions']);
+const ROUTES = new Set(['/', '/healthz', '/readyz', '/api/sessions', '/api/search']);
 
 function routeFor(pathname) {
   return ROUTES.has(pathname) ? pathname : null;
