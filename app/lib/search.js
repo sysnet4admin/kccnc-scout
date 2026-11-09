@@ -14,9 +14,12 @@
 // instants parsed from ISO strings that carry the venue offset.
 
 const { SESSIONS_ALIAS, PAGES_ALIAS } = require('./indices');
+const { streamChat } = require('./llm');
 
 const MAX_QUESTION_LENGTH = 300;
-const TRANSLATE_TIMEOUT_MS = 2500;
+// Output cap for the rewrite, reasoning included; a query is a few words.
+const TRANSLATE_MAX_TOKENS = 200;
+const TRANSLATE_TIMEOUT_MS = 3000;
 const SOON_MINUTES = 30;
 const RRF_K = 60;
 const SESSION_WINDOW = 50;
@@ -50,19 +53,19 @@ function parseAt(raw, now = Date.now()) {
 
 const isPlainAscii = (text) => /^[\x20-\x7e]*$/.test(text);
 
-async function toEnglishQuery(client, endpoint, question) {
+async function toEnglishQuery(client, endpoint, question, { onCall } = {}) {
   if (isPlainAscii(question) || !endpoint) return { english: question, translated: false };
   try {
-    const res = await client.inference.completion(
+    if (onCall) onCall();
+    const raw = await streamChat(client, endpoint, [
       {
-        inference_id: endpoint,
-        input: 'Rewrite this KubeCon attendee question as a short English keyword search query. '
+        role: 'user',
+        content: 'Rewrite this KubeCon attendee question as a short English keyword search query. '
           + 'Keep project, product and people names as written. Output only the query.\n\n'
           + `Question: ${question}`,
       },
-      { requestTimeout: TRANSLATE_TIMEOUT_MS, maxRetries: 0 },
-    );
-    const text = String(res?.completion?.[0]?.result ?? '').replace(/["\n]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+    ], { timeoutMs: TRANSLATE_TIMEOUT_MS, maxTokens: TRANSLATE_MAX_TOKENS });
+    const text = String(raw).replace(/["\n]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
     return text ? { english: text, translated: true } : { english: question, translated: false };
   } catch {
     return { english: question, translated: false };
@@ -128,6 +131,9 @@ function toCard(session, score, pages, at) {
     level: session.level,
     speakers: (session.speakers || []).map((s) => s.name),
     slides: session.slides || null,
+    // AI-read summary of the whole deck and what it contains (demos, topology, results...).
+    deckSummary: session.deck_summary || null,
+    deck: session.deck || null,
     status,
     startsInMinutes: status === 'soon' || status === 'later' ? Math.round((start - at) / 60_000) : null,
     minutesLeft: status === 'live' ? Math.round((end - at) / 60_000) : null,
@@ -151,12 +157,12 @@ function group(cards) {
   return out;
 }
 
-async function search(client, { question: rawQuestion, at: rawAt, translateEndpoint, now = Date.now() }) {
+async function search(client, { question: rawQuestion, at: rawAt, translateEndpoint, onLlmCall, now = Date.now() }) {
   const question = cleanQuestion(rawQuestion);
   const at = parseAt(rawAt, now);
 
   let t = Date.now();
-  const { english, translated } = await toEnglishQuery(client, translateEndpoint, question);
+  const { english, translated } = await toEnglishQuery(client, translateEndpoint, question, { onCall: onLlmCall });
   const translateMs = Date.now() - t;
 
   t = Date.now();
@@ -165,7 +171,7 @@ async function search(client, { question: rawQuestion, at: rawAt, translateEndpo
       index: SESSIONS_ALIAS,
       size: SESSION_WINDOW,
       retriever: hybrid(english, question, SESSION_FIELDS, 'semantic_all', SESSION_WINDOW),
-      _source: { excludes: ['speaker_bios', 'abstract', 'deck_summary', 'semantic_all'] },
+      _source: { excludes: ['speaker_bios', 'abstract', 'semantic_all'] },
     }),
     client.search({
       index: PAGES_ALIAS,
@@ -181,7 +187,7 @@ async function search(client, { question: rawQuestion, at: rawAt, translateEndpo
   const sessions = new Map(sessionHits.map((h) => [h._id, h._source]));
   const missing = ranked.map((r) => r.id).filter((id) => !sessions.has(id));
   if (missing.length) {
-    const res = await client.mget({ index: SESSIONS_ALIAS, ids: missing, _source_excludes: ['speaker_bios', 'abstract', 'deck_summary', 'semantic_all'] });
+    const res = await client.mget({ index: SESSIONS_ALIAS, ids: missing, _source_excludes: ['speaker_bios', 'abstract', 'semantic_all'] });
     for (const d of res.docs) if (d.found) sessions.set(d._id, d._source);
   }
   const searchMs = Date.now() - t;

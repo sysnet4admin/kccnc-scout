@@ -46,7 +46,8 @@ test('search requests are limited per IP', async () => {
 
   const res = await fetch(base + '/api/search?q=conference');
   assert.equal(res.status, 429);
-  assert.deepEqual(await res.json(), { error: 'too many requests' });
+  assert.ok(Number(res.headers.get('retry-after')) > 0);
+  assert.match((await res.json()).error, /too many requests/);
 });
 
 test('unknown paths return 404', async () => {

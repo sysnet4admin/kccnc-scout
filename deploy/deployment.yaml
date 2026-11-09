@@ -26,8 +26,8 @@ spec:
             - name: TEAM_NAME
               value: "kccnc-scout"
             # Elasticsearch: URL and read-only key from Secret `elastic`
-            # (created outside git), and the inference endpoint that rewrites
-            # questions as English search queries.
+            # (created outside git), and the inference endpoints (Claude Opus)
+            # that rewrite questions as English search queries and write answers.
             - name: ES_URL
               valueFrom:
                 secretKeyRef:
@@ -39,7 +39,17 @@ spec:
                   name: elastic
                   key: api-key
             - name: ES_TRANSLATE_ENDPOINT
-              value: kccnc-scout-claude-haiku
+              value: kccnc-scout-claude-opus-chat
+            - name: ES_ANSWER_ENDPOINT
+              value: kccnc-scout-claude-opus-chat
+            # Public URL limits, per pod (2 replicas). An answer costs about
+            # $0.05, so 125 per pod keeps a day under about $15.
+            - name: DAILY_ANSWER_BUDGET
+              value: "125"
+            - name: ANSWER_LIMIT_PER_10_MINUTES
+              value: "10"
+            - name: SEARCH_LIMIT_PER_MINUTE
+              value: "20"
             # OpenTelemetry to Dash0. $(VAR) only expands variables defined
             # above it in this list, so keep this order.
             - name: K8S_POD_NAME

@@ -15,15 +15,28 @@ const LATER = session('3', '2026-11-10T16:00:00-07:00', '2026-11-10T16:30:00-07:
 const PAST = session('4', '2026-11-10T11:00:00-07:00', '2026-11-10T11:30:00-07:00');
 const PAGE_ONLY = session('5', '2026-11-10T14:45:00-07:00', '2026-11-10T15:15:00-07:00');
 
+// The chat endpoint streams server-sent events in the OpenAI chunk format.
+function sseStream(text) {
+  const pieces = text ? [text.slice(0, 5), text.slice(5)] : [];
+  const lines = [
+    '﻿event: message\ndata: {"choices":[{"delta":{"role":"assistant"}}]}\n\n',
+    ...pieces.map((p) => `﻿event: message\ndata: ${JSON.stringify({ choices: [{ delta: { content: p } }] })}\n\n`),
+    'data: [DONE]\n\n',
+  ];
+  return (async function* gen() {
+    for (const l of lines) yield Buffer.from(l);
+  })();
+}
+
 function fakeClient({ translation = 'ebpf security case study', translateError, failSearch } = {}) {
   const calls = { completion: [], search: [], mget: [] };
   return {
     calls,
     inference: {
-      completion: async (params, options) => {
+      chatCompletionUnified: async (params, options) => {
         calls.completion.push({ params, options });
         if (translateError) throw translateError;
-        return { completion: [{ result: translation }] };
+        return sseStream(translation);
       },
     },
     search: async (params) => {
@@ -73,12 +86,18 @@ test('plain English questions skip the LLM', async () => {
 
 test('other languages are rewritten in English with a short timeout and no retries', async () => {
   const client = fakeClient({ translation: '"ebpf security\ncase study"' });
-  const out = await toEnglishQuery(client, 'ep', 'eBPF 보안 사례 발표');
+  let llmCalls = 0;
+  const out = await toEnglishQuery(client, 'ep', 'eBPF 보안 사례 발표', { onCall: () => { llmCalls++; } });
   assert.deepEqual(out, { english: 'ebpf security case study', translated: true });
+  assert.equal(llmCalls, 1);
   const [call] = client.calls.completion;
   assert.equal(call.params.inference_id, 'ep');
-  assert.match(call.params.input, /eBPF 보안 사례 발표/);
-  assert.deepEqual(call.options, { requestTimeout: 2500, maxRetries: 0 });
+  assert.match(call.params.chat_completion_request.messages[0].content, /eBPF 보안 사례 발표/);
+  assert.equal(call.params.chat_completion_request.max_completion_tokens, 200);
+  assert.equal(call.options.asStream, true);
+  assert.equal(call.options.maxRetries, 0);
+  assert.equal(call.options.requestTimeout, 3000);
+  assert.ok(call.options.signal);
 });
 
 test('a failed or empty rewrite falls back to the original words', async () => {
