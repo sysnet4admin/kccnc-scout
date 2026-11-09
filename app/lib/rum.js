@@ -1,6 +1,7 @@
 // Dash0 real-user monitoring for the phone UI: page views, navigation timing,
 // fetch calls (same-origin calls carry trace headers, so browser and server
-// spans join up) and errors, plus the app's own "kccnc.answer" events.
+// spans join up) and errors, plus the app's own "kccnc.answer" events. URL
+// attributes redact the question query parameter before telemetry is sent.
 //
 // The token is a separate, ingest-only token for one dataset. It ends up in
 // the page anyway, but it comes from the environment (Secret `dash0`, key
@@ -14,6 +15,32 @@ const DEFAULT_ENDPOINT = 'https://ingress.us-west-2.aws.dash0.com';
 // JSON that is safe inside an inline <script>.
 const scriptJson = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
 
+function scrubUrlAttributes(attributes) {
+  const scrubbed = { ...attributes };
+  for (const key of ['url.full', 'page.url.full']) {
+    const value = scrubbed[key];
+    if (typeof value !== 'string') continue;
+    try {
+      const url = new URL(value);
+      if (url.searchParams.has('q')) {
+        url.searchParams.set('q', 'REDACTED');
+        scrubbed[key] = url.toString();
+      }
+    } catch {}
+  }
+  for (const key of ['url.query', 'page.url.query']) {
+    const value = scrubbed[key];
+    if (typeof value !== 'string') continue;
+    const prefix = value.startsWith('?') ? '?' : '';
+    const query = new URLSearchParams(prefix ? value.slice(1) : value);
+    if (query.has('q')) {
+      query.set('q', 'REDACTED');
+      scrubbed[key] = prefix + query.toString();
+    }
+  }
+  return scrubbed;
+}
+
 function rumSnippet({ token, endpoint = DEFAULT_ENDPOINT, dataset = 'default', version = 'dev' } = {}) {
   if (!token) return '';
   const config = {
@@ -25,10 +52,10 @@ function rumSnippet({ token, endpoint = DEFAULT_ENDPOINT, dataset = 'default', v
   return [
     '<script>',
     '(function (w, n) { if (w[n]) return; var q = []; var f = w[n] = function () { q.push(arguments); }; f._t = new Date(); f._v = 1; f._q = q; })(window, "dash0");',
-    `dash0("init", ${scriptJson(config)});`,
+    `dash0("init", Object.assign(${scriptJson(config)}, { urlAttributeScrubber: ${scrubUrlAttributes.toString()} }));`,
     '</script>',
     `<script defer crossorigin="anonymous" src="${SDK_URL}" integrity="${SDK_INTEGRITY}"></script>`,
   ].join('\n');
 }
 
-module.exports = { rumSnippet, SDK_URL, SDK_INTEGRITY };
+module.exports = { rumSnippet, scrubUrlAttributes, SDK_URL, SDK_INTEGRITY };
