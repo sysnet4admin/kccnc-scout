@@ -1,0 +1,11 @@
+# Keep at least one of the two app pods up during voluntary disruptions such
+# as a node drain (Radar Checks: missingPDB).
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: app
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: app

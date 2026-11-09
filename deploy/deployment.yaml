@@ -16,9 +16,29 @@ spec:
       labels:
         app: app
     spec:
+      # The app never calls the Kubernetes API (Radar Checks: automountServiceAccountToken).
+      automountServiceAccountToken: false
+      # Keep the two replicas on different nodes when possible. On 2026-11-09 one
+      # node stalled and its pods restarted; with both replicas there, the app
+      # would have been down (Radar Checks: missingTopologySpread).
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: app
+      volumes:
+        # The only writable path, since the root filesystem is read-only.
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
       containers:
         - name: app
           image: app
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           ports:
             - name: http
               containerPort: 8080
@@ -134,6 +154,8 @@ spec:
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
+            # The app writes only to stdout and /tmp (Radar Checks: readOnlyRootFs).
+            readOnlyRootFilesystem: true
             seccompProfile:
               type: RuntimeDefault
             capabilities:
