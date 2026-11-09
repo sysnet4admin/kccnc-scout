@@ -10,7 +10,7 @@ const { getClient } = require('./lib/es');
 const { search, parseAt, parseZone, cleanQuestion, InputError } = require('./lib/search');
 const { writeAnswer } = require('./lib/answer');
 const { clientIp, RateLimiter, TtlCache, DailyBudget, cacheKey } = require('./lib/limits');
-const { zones } = require('./lib/walk');
+const { zones, walkTo } = require('./lib/walk');
 
 const envInt = (name, fallback) => {
   const n = Number.parseInt(process.env[name] ?? '', 10);
@@ -83,6 +83,16 @@ async function handleSearch(res, url, client, p) {
   }
 }
 
+function refreshWalks(result, zone, atMs) {
+  const refresh = (cards) => cards.map((card) => ({
+    ...card,
+    walk: zone && Date.parse(card.end) > atMs
+      ? walkTo(zone, card.room_id, { atMs, startMs: Date.parse(card.start) })
+      : null,
+  }));
+  return { ...result, now: refresh(result.now), later: refresh(result.later) };
+}
+
 // GET /api/answer?q=<question>[&at=<ISO time with offset>]
 // Server-sent events: `results` (the same JSON as /api/search), then `delta`
 // events with pieces of the written answer, then `done`. `notice` says when
@@ -90,8 +100,13 @@ async function handleSearch(res, url, client, p) {
 async function handleAnswer(req, res, url, client, p) {
   if (!client) return sendJson(res, 503, { error: 'search is not configured' });
   let key;
+  let atMs;
+  let zone;
   try {
-    key = cacheKey(cleanQuestion(url.searchParams.get('q')), parseAt(url.searchParams.get('at')), parseZone(url.searchParams.get('zone')));
+    const question = cleanQuestion(url.searchParams.get('q'));
+    atMs = parseAt(url.searchParams.get('at'));
+    zone = parseZone(url.searchParams.get('zone'));
+    key = cacheKey(question, atMs, zone);
   } catch (err) {
     if (err instanceof InputError) return sendJson(res, 400, { error: err.message });
     throw err;
@@ -110,7 +125,7 @@ async function handleAnswer(req, res, url, client, p) {
 
   const cached = p.answers.get(key);
   if (cached) {
-    send('results', cached.result);
+    send('results', refreshWalks(cached.result, zone, atMs));
     if (cached.answer) send('delta', { text: cached.answer });
     send('done', { cached: true });
     return res.end();
