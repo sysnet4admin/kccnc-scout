@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>kccnc-scout</title>
 <meta name="description" content="Find the right KubeCon + CloudNativeCon North America 2026 talk, from what is on the slides, in any language.">
+__RUM__
 <style>
   :root {
     --bg: #f7f7f5; --card: #ffffff; --text: #1d1d1f; --muted: #5f6368; --line: #e3e3e0;
@@ -219,6 +220,10 @@
     const answerBox = el('div', { class: 'answer' }, el('div', { class: 'label' }, 'AI answer'), text);
     out.append(status);
     go.disabled = true;
+    // What the attendee waited for, sent to Dash0 as a "kccnc.answer" event
+    // when RUM is on. No question text leaves the page this way.
+    const t0 = performance.now();
+    const timing = { resultsMs: null, firstWordMs: null, translated: false, talks: 0, cached: false, outcome: 'error' };
 
     const url = new URL('/api/answer', location.origin);
     url.searchParams.set('q', question);
@@ -251,26 +256,49 @@
           const event = (block.match(/^event: (.+)$/m) || [])[1];
           const data = JSON.parse((block.match(/^data: (.+)$/m) || [])[1] || 'null');
           if (event === 'results') {
+            timing.resultsMs = Math.round(performance.now() - t0);
+            timing.translated = Boolean(data.searched?.translated);
+            timing.talks = data.now.length + data.later.length + data.past.length;
             status.replaceWith(answerBox);
             text.textContent = 'Writing an answer...';
             text.dataset.waiting = '1';
             renderResults(data, answerBox);
           } else if (event === 'delta') {
+            if (timing.firstWordMs === null) timing.firstWordMs = Math.round(performance.now() - t0);
             if (text.dataset.waiting) { text.textContent = ''; delete text.dataset.waiting; }
             text.textContent += data.text;
           } else if (event === 'notice' || event === 'error') {
+            timing.outcome = event;
             if (!answerBox.isConnected) { status.textContent = data.message; continue; }
             text.textContent = data.message;
             delete text.dataset.waiting;
-          } else if (event === 'done' && text.dataset.waiting) {
-            text.textContent = 'See the talks below.';
+          } else if (event === 'done') {
+            timing.cached = Boolean(data?.cached);
+            if (timing.outcome === 'error') timing.outcome = 'answered';
+            if (text.dataset.waiting) text.textContent = 'See the talks below.';
           }
         }
       }
     } catch (err) {
-      if (err.name !== 'AbortError') status.textContent = 'Could not reach the server. Try again.';
+      if (err.name === 'AbortError') timing.outcome = 'aborted';
+      else status.textContent = 'Could not reach the server. Try again.';
     } finally {
       go.disabled = false;
+      if (typeof window.dash0 === 'function') {
+        window.dash0('sendEvent', 'kccnc.answer', {
+          attributes: {
+            'kccnc.outcome': timing.outcome,
+            'kccnc.results_ms': timing.resultsMs ?? -1,
+            'kccnc.first_word_ms': timing.firstWordMs ?? -1,
+            'kccnc.total_ms': Math.round(performance.now() - t0),
+            'kccnc.cached': timing.cached,
+            'kccnc.translated': timing.translated,
+            'kccnc.talks': timing.talks,
+            'kccnc.zone': zoneSelect.value || 'none',
+            'kccnc.demo_time': Boolean(atSelect.value),
+          },
+        });
+      }
     }
   }
 

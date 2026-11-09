@@ -73,6 +73,14 @@ spec:
                 secretKeyRef:
                   name: dash0
                   key: token
+            # Browser monitoring (RUM): a separate ingest-only token that the
+            # page includes. Optional, so pods start without it (no RUM then).
+            - name: DASH0_RUM_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: dash0
+                  key: rum-token
+                  optional: true
             - name: OTEL_SERVICE_NAME
               value: kccnc-scout
             - name: OTEL_RESOURCE_ATTRIBUTES

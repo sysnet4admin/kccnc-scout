@@ -11,6 +11,7 @@ const { search, parseAt, parseZone, cleanQuestion, InputError } = require('./lib
 const { writeAnswer } = require('./lib/answer');
 const { clientIp, RateLimiter, TtlCache, DailyBudget, cacheKey } = require('./lib/limits');
 const { zones } = require('./lib/walk');
+const { rumSnippet } = require('./lib/rum');
 
 const envInt = (name, fallback) => {
   const n = Number.parseInt(process.env[name] ?? '', 10);
@@ -26,7 +27,8 @@ const version = process.env.APP_VERSION || 'dev';
 const zoneOptions = zones.map((z) => `<option value="${z.id}">${z.label}</option>`).join('\n      ');
 const homePage = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8')
   .replace('__VERSION__', version)
-  .replace('__ZONE_OPTIONS__', zoneOptions);
+  .replace('__ZONE_OPTIONS__', zoneOptions)
+  .replace('__RUM__', () => rumSnippet({ token: process.env.DASH0_RUM_TOKEN, version }));
 
 const sessions = [
   { id: 1, time: '10:00', room: 'Main', title: 'Kickoff and sponsor talks' },

@@ -1,0 +1,34 @@
+// Dash0 real-user monitoring for the phone UI: page views, navigation timing,
+// fetch calls (same-origin calls carry trace headers, so browser and server
+// spans join up) and errors, plus the app's own "kccnc.answer" events.
+//
+// The token is a separate, ingest-only token for one dataset. It ends up in
+// the page anyway, but it comes from the environment (Secret `dash0`, key
+// `rum-token`) rather than the repository. Without it the page has no RUM.
+
+const SDK_URL = 'https://cdn.jsdelivr.net/npm/@dash0/sdk-web@0.29.0/dist/dash0.iife.js';
+// sha384 of dist/dash0.iife.js in the @dash0/sdk-web 0.29.0 npm package.
+const SDK_INTEGRITY = 'sha384-B6en+sgbt5GMWdNeuTt0hlSr/xgxkZariMLuQ+zwcbFwBLyyggeeIN7EkkYUKyI9';
+const DEFAULT_ENDPOINT = 'https://ingress.us-west-2.aws.dash0.com';
+
+// JSON that is safe inside an inline <script>.
+const scriptJson = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
+
+function rumSnippet({ token, endpoint = DEFAULT_ENDPOINT, dataset = 'default', version = 'dev' } = {}) {
+  if (!token) return '';
+  const config = {
+    serviceName: 'kccnc-scout-web',
+    serviceVersion: version,
+    environment: 'hackathon',
+    endpoint: { url: endpoint, authToken: token, dataset },
+  };
+  return [
+    '<script>',
+    '(function (w, n) { if (w[n]) return; var q = []; var f = w[n] = function () { q.push(arguments); }; f._t = new Date(); f._v = 1; f._q = q; })(window, "dash0");',
+    `dash0("init", ${scriptJson(config)});`,
+    '</script>',
+    `<script defer crossorigin="anonymous" src="${SDK_URL}" integrity="${SDK_INTEGRITY}"></script>`,
+  ].join('\n');
+}
+
+module.exports = { rumSnippet, SDK_URL, SDK_INTEGRITY };
