@@ -23,3 +23,17 @@ test('values cannot close the script tag', () => {
   assert.equal(html.match(/<\/script>/g).length, 2);
   assert.match(html, /\\u003c\/script>/);
 });
+
+test('RUM redacts the question from every URL it records', () => {
+  const { URL_SCRUBBER } = require('../lib/rum');
+  // eslint-disable-next-line no-new-func
+  const scrub = new Function(`return (${URL_SCRUBBER});`)();
+  const full = 'https://kccnc-scout.cnh.radarhq.io/api/answer?q=my+name+is+Ada&at=x';
+  const out = scrub({ 'url.full': full, 'url.query': 'q=my+name+is+Ada&at=x', 'url.path': '/api/answer' });
+  assert.equal(out['url.query'], 'q=REDACTED&at=x');
+  // url.full is left as is; the SDK rebuilds it from the scrubbed parts.
+  assert.equal(out['url.full'], full);
+  const untouched = { 'url.full': 'https://x/', 'url.query': 'zone=expo' };
+  assert.equal(scrub(untouched), untouched);
+  assert.match(rumSnippet({ token: 't' }), /urlAttributeScrubber: function/);
+});
