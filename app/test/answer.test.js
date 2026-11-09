@@ -52,12 +52,14 @@ test('parseLine keeps visible text only', () => {
   assert.equal(parseLine('data: not json'), '');
 });
 
-test('streamChat collects the answer and reports each piece', async () => {
-  const client = { inference: { chatCompletionUnified: async () => sse(['a', 'b', 'c']) } };
+test('streamChat collects the answer, reports each piece, and forwards a token cap', async () => {
+  let request;
+  const client = { inference: { chatCompletionUnified: async (params) => { request = params; return sse(['a', 'b', 'c']); } } };
   const pieces = [];
-  const text = await streamChat(client, 'ep', [], { timeoutMs: 1000, onDelta: (d) => pieces.push(d) });
+  const text = await streamChat(client, 'ep', [], { timeoutMs: 1000, maxTokens: 23, onDelta: (d) => pieces.push(d) });
   assert.equal(text, 'abc');
   assert.deepEqual(pieces, ['a', 'b', 'c']);
+  assert.equal(request.chat_completion_request.max_completion_tokens, 23);
 });
 
 test('clientIp takes the first X-Forwarded-For address', () => {
@@ -154,6 +156,8 @@ test('/api/answer streams results, then the answer, and caches it', async () => 
     assert.deepEqual(events.map((e) => e.event), ['results', 'delta', 'delta', 'done']);
     assert.equal(events[0].data.now[0].title, 'Your Quickstart is Broken');
     assert.equal(events[1].data.text + events[2].data.text, 'Go to Your Quickstart is Broken (p.16).');
+    const answerCall = client.calls.chat.find(({ params }) => params.inference_id === 'answer-ep');
+    assert.equal(answerCall.params.chat_completion_request.max_completion_tokens, 400);
     assert.deepEqual(events[3].data, { cached: false });
     const llmCalls = client.calls.chat.length;
 

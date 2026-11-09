@@ -5,7 +5,7 @@
 // Calls `onDelta(text)` for each piece of the answer and resolves with the
 // whole text. `timeoutMs` bounds the entire call, not just the first byte.
 // `signal` (optional) cancels the call early, for example when the browser goes away.
-async function streamChat(client, endpoint, messages, { timeoutMs, onDelta, signal } = {}) {
+async function streamChat(client, endpoint, messages, { timeoutMs, maxTokens, onDelta, signal } = {}) {
   const controller = new AbortController();
   const timer = timeoutMs ? setTimeout(() => controller.abort(), timeoutMs) : null;
   const cancel = () => controller.abort();
@@ -15,7 +15,7 @@ async function streamChat(client, endpoint, messages, { timeoutMs, onDelta, sign
   }
   try {
     const stream = await client.inference.chatCompletionUnified(
-      { inference_id: endpoint, chat_completion_request: { messages } },
+      { inference_id: endpoint, chat_completion_request: { messages, ...(maxTokens ? { max_completion_tokens: maxTokens } : {}) } },
       { asStream: true, signal: controller.signal, maxRetries: 0, ...(timeoutMs ? { requestTimeout: timeoutMs } : {}) },
     );
     let buffer = '';

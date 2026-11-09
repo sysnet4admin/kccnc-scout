@@ -93,6 +93,7 @@ test('other languages are rewritten in English with a short timeout and no retri
   const [call] = client.calls.completion;
   assert.equal(call.params.inference_id, 'ep');
   assert.match(call.params.chat_completion_request.messages[0].content, /eBPF 보안 사례 발표/);
+  assert.equal(call.params.chat_completion_request.max_completion_tokens, 60);
   assert.equal(call.options.asStream, true);
   assert.equal(call.options.maxRetries, 0);
   assert.equal(call.options.requestTimeout, 3000);

@@ -62,7 +62,7 @@ async function toEnglishQuery(client, endpoint, question, { onCall } = {}) {
           + 'Keep project, product and people names as written. Output only the query.\n\n'
           + `Question: ${question}`,
       },
-    ], { timeoutMs: TRANSLATE_TIMEOUT_MS });
+    ], { timeoutMs: TRANSLATE_TIMEOUT_MS, maxTokens: 60 });
     const text = String(raw).replace(/["\n]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
     return text ? { english: text, translated: true } : { english: question, translated: false };
   } catch {

@@ -71,7 +71,7 @@ function buildMessages(result) {
 }
 
 function writeAnswer(client, endpoint, result, { onDelta, signal } = {}) {
-  return streamChat(client, endpoint, buildMessages(result), { timeoutMs: ANSWER_TIMEOUT_MS, onDelta, signal });
+  return streamChat(client, endpoint, buildMessages(result), { timeoutMs: ANSWER_TIMEOUT_MS, maxTokens: 400, onDelta, signal });
 }
 
 module.exports = { writeAnswer, buildMessages, describe, SYSTEM_PROMPT };
