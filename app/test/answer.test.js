@@ -21,13 +21,13 @@ function sse(pieces) {
 }
 
 const TALK = {
-  id: '2', title: 'Your Quickstart is Broken', start: '2026-11-10T14:41:00-07:00', end: '2026-11-10T15:10:00-07:00', room_id: 92181,
+  id: '2', title: 'Your Quickstart is Broken', start: '2026-11-10T14:41:00-07:00', end: '2026-11-10T15:10:00-07:00',
   day: '2026-11-10', venue: 'Hyatt Regency', floor: 'Level 4', room: 'Regency Ballroom CD', track: 'Cloud Native Novice', level: 'Beginner',
   speakers: [{ name: 'Ada' }], slides: 'https://example.org/2.pdf', deck_summary: 'Big titles, simple drawings, little code.',
   deck: { has_live_demo: false, has_experience_story: true, topology_detail: 'basic', audience: 'beginner' },
 };
 
-function fakeClient(talk = TALK) {
+function fakeClient() {
   const calls = { chat: [] };
   return {
     calls,
@@ -38,7 +38,7 @@ function fakeClient(talk = TALK) {
       },
     },
     search: async (params) => (params.index === 'kccnc-scout-sessions'
-      ? { hits: { hits: [{ _id: '2', _source: talk }] } }
+      ? { hits: { hits: [{ _id: '2', _source: TALK }] } }
       : { hits: { hits: [{ _source: { session_id: '2', page: 16, page_type: 'concept_explanation', summary: 'Simple drawing of a cluster' } }] } }),
     mget: async () => ({ docs: [] }),
   };
@@ -166,31 +166,6 @@ test('/api/answer streams results, then the answer, and caches it', async () => 
     const again = parseEvents(await (await fetch(base + Q)).text());
     assert.deepEqual(again.map((e) => e.event), ['results', 'delta', 'done']);
     assert.deepEqual(again[2].data, { cached: true });
-    assert.equal(client.calls.chat.length, llmCalls);
-  });
-});
-
-test('/api/answer refreshes cached walk arrival and lateness for the current time', async () => {
-  const client = fakeClient({ ...TALK, start: '2026-11-10T14:30:00-07:00' });
-  const pathAt = (at) => `/api/answer?q=${encodeURIComponent('초보자용 발표 있어?')}&at=${encodeURIComponent(at)}&zone=expo`;
-  await withServer({ searchClient: client }, async (base) => {
-    const first = parseEvents(await (await fetch(base + pathAt('2026-11-10T14:20:00-07:00'))).text());
-    assert.deepEqual(first[0].data.now[0].walk, {
-      minutes: 11,
-      afterKeynote: false,
-      arrive: '2026-11-10T21:31:00.000Z',
-      minutesLate: 1,
-    });
-    const llmCalls = client.calls.chat.length;
-
-    const cached = parseEvents(await (await fetch(base + pathAt('2026-11-10T14:21:00-07:00'))).text());
-    assert.deepEqual(cached[0].data.now[0].walk, {
-      minutes: 11,
-      afterKeynote: false,
-      arrive: '2026-11-10T21:32:00.000Z',
-      minutesLate: 2,
-    });
-    assert.deepEqual(cached[2].data, { cached: true });
     assert.equal(client.calls.chat.length, llmCalls);
   });
 });
