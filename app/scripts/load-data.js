@@ -87,7 +87,7 @@ async function currentAliasIndices(client, alias) {
   }
 }
 
-async function loadIndex(client, { alias, definition, docs, keepOld }) {
+async function buildIndex(client, { alias, definition, docs }) {
   const name = `${alias}-${indexStamp()}`;
   const previous = await currentAliasIndices(client, alias);
   await client.indices.create({ index: name, ...definition });
@@ -117,17 +117,26 @@ async function loadIndex(client, { alias, definition, docs, keepOld }) {
   const { count } = await client.count({ index: name });
   if (count !== docs.length) throw new Error(`${alias}: ${name} has ${count} documents, expected ${docs.length}`);
 
-  const actions = [
-    ...previous.map((index) => ({ remove: { index, alias } })),
-    { add: { index: name, alias } },
-  ];
-  await client.indices.updateAliases({ actions });
-  console.log(`${alias}: now points to ${name} (${count} documents)`);
+  return { alias, name, previous, count };
+}
+
+async function swapIndices(client, built, keepOld) {
+  await client.indices.updateAliases({
+    actions: built.flatMap(({ alias, name, previous }) => [
+      ...previous.map((index) => ({ remove: { index, alias } })),
+      { add: { index: name, alias } },
+    ]),
+  });
+  for (const { alias, name, previous, count } of built) {
+    console.log(`${alias}: now points to ${name} (${count} documents)`);
+  }
 
   if (!keepOld) {
-    for (const index of previous) {
-      await client.indices.delete({ index });
-      console.log(`${alias}: deleted ${index}`);
+    for (const { alias, previous } of built) {
+      for (const index of previous) {
+        await client.indices.delete({ index });
+        console.log(`${alias}: deleted ${index}`);
+      }
     }
   }
 }
@@ -163,8 +172,13 @@ async function main() {
   console.log(`synonyms: ${indices.SYNONYMS_SET} has ${indices.SYNONYM_RULES.length} rules`);
 
   const keepOld = values['keep-old'];
-  await loadIndex(client, { alias: indices.SESSIONS_ALIAS, definition: indices.sessionsIndex, docs: docs.sessions, keepOld });
-  await loadIndex(client, { alias: indices.PAGES_ALIAS, definition: indices.pagesIndex, docs: docs.pages.docs, keepOld });
+  const specs = [
+    { alias: indices.SESSIONS_ALIAS, definition: indices.sessionsIndex, docs: docs.sessions },
+    { alias: indices.PAGES_ALIAS, definition: indices.pagesIndex, docs: docs.pages.docs },
+  ];
+  const built = [];
+  for (const spec of specs) built.push(await buildIndex(client, spec));
+  await swapIndices(client, built, keepOld);
 }
 
 if (require.main === module) {
