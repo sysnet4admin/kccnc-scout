@@ -7,9 +7,10 @@ const path = require('node:path');
 const log = require('./lib/log');
 const { routeFor, nameRoute, shutdownTelemetry } = require('./lib/telemetry');
 const { getClient } = require('./lib/es');
-const { search, parseAt, cleanQuestion, InputError } = require('./lib/search');
+const { search, parseAt, parseZone, cleanQuestion, InputError } = require('./lib/search');
 const { writeAnswer } = require('./lib/answer');
 const { clientIp, RateLimiter, TtlCache, DailyBudget, cacheKey } = require('./lib/limits');
+const { zones } = require('./lib/walk');
 
 const envInt = (name, fallback) => {
   const n = Number.parseInt(process.env[name] ?? '', 10);
@@ -20,8 +21,12 @@ const port = Number(process.env.PORT || 8080);
 const version = process.env.APP_VERSION || 'dev';
 
 // The phone UI: one static page that calls /api/answer. The footer shows the
-// running version, which the deploy checks read.
-const homePage = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8').replace('__VERSION__', version);
+// running version, which the deploy checks read; the zone picker lists the
+// venue zones from data/venue.json (fixed labels, no user input).
+const zoneOptions = zones.map((z) => `<option value="${z.id}">${z.label}</option>`).join('\n      ');
+const homePage = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8')
+  .replace('__VERSION__', version)
+  .replace('__ZONE_OPTIONS__', zoneOptions);
 
 const sessions = [
   { id: 1, time: '10:00', room: 'Main', title: 'Kickoff and sponsor talks' },
@@ -58,6 +63,7 @@ function searchOptions(url, p) {
   return {
     question: url.searchParams.get('q'),
     at: url.searchParams.get('at'),
+    zone: url.searchParams.get('zone'),
     translateEndpoint: p.translateBudget.remaining() > 0 ? process.env.ES_TRANSLATE_ENDPOINT : undefined,
     onLlmCall: () => p.translateBudget.take(),
   };
@@ -85,7 +91,7 @@ async function handleAnswer(req, res, url, client, p) {
   if (!client) return sendJson(res, 503, { error: 'search is not configured' });
   let key;
   try {
-    key = cacheKey(cleanQuestion(url.searchParams.get('q')), parseAt(url.searchParams.get('at')));
+    key = cacheKey(cleanQuestion(url.searchParams.get('q')), parseAt(url.searchParams.get('at')), parseZone(url.searchParams.get('zone')));
   } catch (err) {
     if (err instanceof InputError) return sendJson(res, 400, { error: err.message });
     throw err;

@@ -15,6 +15,7 @@
 
 const { SESSIONS_ALIAS, PAGES_ALIAS } = require('./indices');
 const { streamChat } = require('./llm');
+const { walkTo, isZone } = require('./walk');
 
 const MAX_QUESTION_LENGTH = 300;
 // Output cap for the rewrite, reasoning included; a query is a few words.
@@ -113,11 +114,14 @@ function timeStatus(session, at) {
   return 'later';
 }
 
-function toCard(session, score, pages, at) {
+function toCard(session, score, pages, at, zone) {
   const status = timeStatus(session, at);
   const start = Date.parse(session.start);
   const end = Date.parse(session.end);
+  // Walking time from the attendee's zone; null without a zone or a known room.
+  const walk = zone && status !== 'past' ? walkTo(zone, session.room_id, { atMs: at, startMs: start }) : null;
   return {
+    walk,
     id: session.id,
     title: session.title,
     start: session.start,
@@ -157,8 +161,16 @@ function group(cards) {
   return out;
 }
 
-async function search(client, { question: rawQuestion, at: rawAt, translateEndpoint, onLlmCall, now = Date.now() }) {
+// "zone" is where the attendee is: one of the seven ids in data/venue.json.
+function parseZone(raw) {
+  if (raw === undefined || raw === null || raw === '') return null;
+  if (!isZone(raw)) throw new InputError('zone must be one of the venue zones');
+  return raw;
+}
+
+async function search(client, { question: rawQuestion, at: rawAt, zone: rawZone, translateEndpoint, onLlmCall, now = Date.now() }) {
   const question = cleanQuestion(rawQuestion);
+  const zone = parseZone(rawZone);
   const at = parseAt(rawAt, now);
 
   let t = Date.now();
@@ -194,15 +206,16 @@ async function search(client, { question: rawQuestion, at: rawAt, translateEndpo
 
   const cards = ranked
     .filter((r) => sessions.has(r.id))
-    .map((r) => toCard(sessions.get(r.id), r.score, pagesBySession.get(r.id), at));
+    .map((r) => toCard(sessions.get(r.id), r.score, pagesBySession.get(r.id), at, zone));
 
   return {
     question,
     searched: { english, translated },
+    zone,
     at: new Date(at).toISOString(),
     ...group(cards),
     timings: { translateMs, searchMs },
   };
 }
 
-module.exports = { search, cleanQuestion, parseAt, toEnglishQuery, fuse, timeStatus, group, InputError, MAX_QUESTION_LENGTH, SOON_MINUTES };
+module.exports = { search, cleanQuestion, parseAt, parseZone, toEnglishQuery, fuse, timeStatus, group, InputError, MAX_QUESTION_LENGTH, SOON_MINUTES };

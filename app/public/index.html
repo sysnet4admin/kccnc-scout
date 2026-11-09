@@ -40,6 +40,8 @@
   .card h3 { font-size: 16px; margin: 0 0 4px; }
   .card h3 a { color: inherit; }
   .meta { font-size: 14px; color: var(--muted); }
+  .walk { color: var(--text); }
+  .walk.late { color: var(--soon); }
   .badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 10px; margin-right: 6px; }
   .badge.live { color: var(--live); border: 1px solid var(--live); }
   .badge.soon { color: var(--soon); border: 1px solid var(--soon); }
@@ -66,6 +68,14 @@
     <input type="search" id="q" name="q" maxlength="300" autocomplete="off" enterkeyhint="search" placeholder="Ask in any language..." aria-label="Your question">
     <button type="submit" id="go">Ask</button>
   </form>
+
+  <div class="time-row">
+    <label for="zone">Near</label>
+    <select id="zone">
+      <option value="">pick where you are</option>
+      __ZONE_OPTIONS__
+    </select>
+  </div>
 
   <div class="time-row">
     <label for="at">As of</label>
@@ -100,10 +110,19 @@
   const fmtDayTime = new Intl.DateTimeFormat('en-US', { timeZone: TZ, weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
   const fmtTime = new Intl.DateTimeFormat('en-US', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hour12: false });
   const $ = (id) => document.getElementById(id);
-  const form = $('ask'), input = $('q'), go = $('go'), atSelect = $('at'), out = $('out'), clock = $('clock');
+  const form = $('ask'), input = $('q'), go = $('go'), atSelect = $('at'), zoneSelect = $('zone'), out = $('out'), clock = $('clock');
   let controller = null;
 
   const params = new URLSearchParams(location.search);
+  // Where the attendee is: from the link, else from the last visit on this phone.
+  const knownZone = (z) => [...zoneSelect.options].some((o) => o.value === z);
+  let savedZone = null;
+  try { savedZone = localStorage.getItem('zone'); } catch {}
+  const startZone = params.get('zone') || savedZone;
+  if (startZone && knownZone(startZone)) zoneSelect.value = startZone;
+  zoneSelect.addEventListener('change', () => {
+    try { localStorage.setItem('zone', zoneSelect.value); } catch {}
+  });
   const custom = params.get('at');
   const ok = custom && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(\.\d+)?(Z|[+-]\d{2}:\d{2})$/.test(custom) && !Number.isNaN(Date.parse(custom));
   if (ok) {
@@ -137,6 +156,15 @@
     return ['later', 'later'];
   }
 
+  function walkLine(card) {
+    const w = card.walk;
+    if (!w) return null;
+    const arrive = fmtTime.format(new Date(w.arrive));
+    const crowd = w.afterKeynote ? ' (keynote crowd)' : '';
+    if (w.minutesLate > 0) return el('div', { class: 'meta walk late' }, `${w.minutes} min walk${crowd}, arrive ${arrive}: ${w.minutesLate} min after it starts`);
+    return el('div', { class: 'meta walk' }, `${w.minutes} min walk${crowd}, arrive ${arrive}`);
+  }
+
   function cardNode(card) {
     const [cls, label] = when(card);
     const slides = safeLink(card.slides);
@@ -148,6 +176,7 @@
       el('h3', {}, title),
       el('div', { class: 'meta' }, el('span', { class: `badge ${cls}` }, label), time),
       place && el('div', { class: 'meta' }, place),
+      walkLine(card),
       facts && el('div', { class: 'meta' }, facts),
       card.speakers?.length && el('div', { class: 'meta' }, card.speakers.join(', ')),
     );
@@ -194,9 +223,11 @@
     const url = new URL('/api/answer', location.origin);
     url.searchParams.set('q', question);
     if (atSelect.value) url.searchParams.set('at', atSelect.value);
+    if (zoneSelect.value) url.searchParams.set('zone', zoneSelect.value);
     const shown = new URL(location.href);
     shown.searchParams.set('q', question);
     if (atSelect.value) shown.searchParams.set('at', atSelect.value); else shown.searchParams.delete('at');
+    if (zoneSelect.value) shown.searchParams.set('zone', zoneSelect.value); else shown.searchParams.delete('zone');
     history.replaceState(null, '', shown);
 
     try {

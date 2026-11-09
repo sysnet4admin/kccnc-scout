@@ -98,10 +98,13 @@ class DailyBudget {
   }
 }
 
-// Same question, same 5-minute slot: same answer.
-function cacheKey(question, atMs) {
-  const slot = Math.floor(atMs / 300_000);
-  return `${slot}|${question.toLowerCase()}`;
+// Same question, same zone, same time slot: same answer. Without a zone the
+// slot is 5 minutes. With a zone the answer states walking arrival times and
+// minutes late, which change every minute, so the slot is 1 minute: a cached
+// answer is then never more than a minute off, the precision the app shows.
+function cacheKey(question, atMs, zone = null) {
+  const slot = Math.floor(atMs / (zone ? 60_000 : 300_000));
+  return `${zone ? 'm' : 'f'}${slot}|${zone || '-'}|${question.toLowerCase()}`;
 }
 
 module.exports = { clientIp, RateLimiter, TtlCache, DailyBudget, cacheKey };

@@ -2,6 +2,9 @@
 // talks the search found. The LLM only words the answer: which talks are on
 // now, later or over was already decided in code (lib/search.js).
 const { streamChat } = require('./llm');
+const { zones } = require('./walk');
+
+const zoneLabel = (id) => zones.find((z) => z.id === id)?.label || null;
 
 const ANSWER_TIMEOUT_MS = 30_000;
 // The cap covers the model's reasoning as well as the visible answer. Measured
@@ -21,6 +24,7 @@ Structure:
 3. Later: up to two talks from LATER that fit, one line each, with day and time.
 4. If a PAST talk fits well, end with one line saying it is over and the slides or recording are worth a look later.
 If nothing in NOW fits the question, say so plainly and point to LATER instead. Never recommend a talk just because it is on now.
+When a walk is listed, give the walking minutes for each pick. If walking there means arriving after the start, say how many minutes the attendee would miss and let them choose; don't hide it or rank such a talk first only because it fits.
 All times are venue time (MST).`;
 
 const timeFormat = new Intl.DateTimeFormat('en-US', { timeZone: VENUE_TIME_ZONE, weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -44,6 +48,11 @@ function describe(card, n) {
   const lines = [`[${n}] ${card.title}`, `    ${venueTime(card.start)}-${venueClock(card.end)} (${when}), ${where || 'room not listed'}`];
   const facts = [card.level && `level ${card.level}`, card.track && `track ${card.track}`, card.speakers?.length && `speakers ${card.speakers.join(', ')}`].filter(Boolean);
   if (facts.length) lines.push(`    ${facts.join('; ')}`);
+  if (card.walk) {
+    const late = card.walk.minutesLate > 0 ? `, ${card.walk.minutesLate} min after it starts` : ', before it starts';
+    const crowd = card.walk.afterKeynote ? ' (includes the crowd leaving the keynote)' : '';
+    lines.push(`    Walk: ${card.walk.minutes} min${crowd}, arriving ${venueClock(card.walk.arrive)}${late}`);
+  }
   if (card.deckSummary) lines.push(`    Slides overall: ${card.deckSummary}`);
   if (card.deck) {
     const flags = Object.entries(DECK_FLAGS).filter(([k]) => card.deck[k]).map(([, v]) => v);
@@ -62,6 +71,7 @@ function buildMessages(result) {
   const user = [
     `Question: ${result.question}`,
     `Asked at: ${venueTime(result.at)} MST`,
+    `Attendee is at: ${zoneLabel(result.zone) || 'not given (no walking times)'}`,
     '',
     section('NOW', result.now),
     '',

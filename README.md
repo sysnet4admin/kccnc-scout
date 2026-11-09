@@ -4,7 +4,7 @@ Ask, in any language, which KubeCon + CloudNativeCon North America 2026 talk to 
 
 **Try it on a phone: https://kccnc-scout.cnh.radarhq.io**
 
-Titles and abstracts often don't tell you whether a talk is what you want. kccnc-scout reads the uploaded slide decks page by page, so it can tell a talk that walks through a real migration with measured results from one that stays at slogans, or a beginner talk with simple drawings from one full of code. It answers with the talks that are on now or starting soon, then later ones, and lists talks that are already over as "slides now, recording later". Every pick links to the slide pages it is based on.
+Titles and abstracts often don't tell you whether a talk is what you want. kccnc-scout reads the uploaded slide decks page by page, so it can tell a talk that walks through a real migration with measured results from one that stays at slogans, or a beginner talk with simple drawings from one full of code. It answers with the talks that are on now or starting soon, then later ones, and lists talks that are already over as "slides now, recording later". Every pick links to the slide pages it is based on, and shows how long the walk is from where you are and whether you would arrive late.
 
 Built for the [Cloud Native Hackathon](https://www.wemakedevs.org/hackathons/cnh) on November 9, 2026, in Salt Lake City.
 
@@ -12,16 +12,17 @@ Built for the [Cloud Native Hackathon](https://www.wemakedevs.org/hackathons/cnh
 
 ```
 phone UI (/)
-  └─ GET /api/answer?q=...&at=...            server-sent events
+  └─ GET /api/answer?q=...&at=...&zone=...   server-sent events
        1. rewrite a non-English question as an English query   Claude Opus via an Elasticsearch inference endpoint
        2. hybrid search, sessions and slide pages in parallel  BM25 + semantic_text (Jina, multilingual), RRF
-       3. fuse both lists by rank; group by time               code, relative to "at"
+       3. fuse both lists by rank; group by time; add walks    code, relative to "at" and "zone"
        4. stream "results", then the written answer            Claude Opus via an Elasticsearch inference endpoint
 ```
 
-- **Elasticsearch is the only data store.** Two indices: `kccnc-scout-sessions` (600 schedule entries with speakers, rooms, tracks, and a summary of each deck) and `kccnc-scout-pages` (3,211 slide pages from 113 decks). Each page document carries the session's time and room, so page search filters by time without a join. English analysis with search-time synonyms (`k8s`/`kubernetes`, `otel`/`opentelemetry` and more), and `semantic_text` on `.jina-embeddings-v5-text-small` for questions in any language.
+- **Elasticsearch holds all talk data.** Two indices: `kccnc-scout-sessions` (600 schedule entries with speakers, rooms, tracks, and a summary of each deck) and `kccnc-scout-pages` (3,211 slide pages from 113 decks). Each page document carries the session's time and room, so page search filters by time without a join. English analysis with search-time synonyms (`k8s`/`kubernetes`, `otel`/`opentelemetry` and more), and `semantic_text` on `.jina-embeddings-v5-text-small` for questions in any language.
 - **Time is code, not LLM output.** The schedule has no time zone offset; the loader stores every time with `-07:00` (MST), and the API compares instants. "On now", "starting within 30 minutes", "later" and "over" are decided before the model sees anything. The model only words the answer from the talks it is given and cites slide pages.
 - **The phone shows results first.** Cards appear as soon as search finishes (about 0.3 s for an English question, 1.5 s with a rewrite); the answer streams in on top.
+- **Walking times.** Pick one of seven zones (keynote hall, expo halls, Grand Ballroom, two Level 2 areas, two Hyatt areas) and every upcoming talk shows the walk, the arrival time and the minutes you would miss. The model in [`app/lib/walk.js`](app/lib/walk.js) uses Manhattan distance at 70 m/min, 0.75 min per floor and 0.5 min to cross into the Hyatt, routed through the big halls' doors, the escalators and the connection door, with extra minutes for the crowd right after a keynote. Room positions ([`app/data/venue.json`](app/data/venue.json)) were placed from public floor plans and maps before the event and not surveyed on site.
 - **"As of"** lets you ask as if it were another moment during the conference, so the app works before and after the talks.
 
 ## How each sponsor tool is used
