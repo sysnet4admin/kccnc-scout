@@ -17,6 +17,8 @@ const { SESSIONS_ALIAS, PAGES_ALIAS } = require('./indices');
 const { streamChat } = require('./llm');
 
 const MAX_QUESTION_LENGTH = 300;
+// Output cap for the rewrite, reasoning included; a query is a few words.
+const TRANSLATE_MAX_TOKENS = 200;
 const TRANSLATE_TIMEOUT_MS = 3000;
 const SOON_MINUTES = 30;
 const RRF_K = 60;
@@ -62,7 +64,7 @@ async function toEnglishQuery(client, endpoint, question, { onCall } = {}) {
           + 'Keep project, product and people names as written. Output only the query.\n\n'
           + `Question: ${question}`,
       },
-    ], { timeoutMs: TRANSLATE_TIMEOUT_MS, maxTokens: 60 });
+    ], { timeoutMs: TRANSLATE_TIMEOUT_MS, maxTokens: TRANSLATE_MAX_TOKENS });
     const text = String(raw).replace(/["\n]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
     return text ? { english: text, translated: true } : { english: question, translated: false };
   } catch {

@@ -116,6 +116,9 @@ async function handleAnswer(req, res, url, client, p) {
       const t = Date.now();
       answer = await writeAnswer(client, endpoint, result, { onDelta: (text) => send('delta', { text }), signal: gone.signal });
       log.info({ answerMs: Date.now() - t, chars: answer.length, ...result.timings }, 'answer');
+      // A stream can end with no visible text (for example when the token cap
+      // is spent on reasoning). Say so instead of leaving the box empty.
+      if (!answer.trim()) send('notice', { message: "Couldn't write an answer this time; the talks below come straight from search." });
     } else if (endpoint && hasTalks) {
       send('notice', { message: "Today's AI answer budget is used up; the talks below come straight from search." });
     }

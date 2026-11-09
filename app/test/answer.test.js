@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { parseLine, streamChat } = require('../lib/llm');
 const { clientIp, RateLimiter, TtlCache, DailyBudget, cacheKey } = require('../lib/limits');
-const { buildMessages } = require('../lib/answer');
+const { buildMessages, ANSWER_MAX_TOKENS } = require('../lib/answer');
 
 process.env.ES_TRANSLATE_ENDPOINT = 'translate-ep';
 process.env.ES_ANSWER_ENDPOINT = 'answer-ep';
@@ -157,7 +157,9 @@ test('/api/answer streams results, then the answer, and caches it', async () => 
     assert.equal(events[0].data.now[0].title, 'Your Quickstart is Broken');
     assert.equal(events[1].data.text + events[2].data.text, 'Go to Your Quickstart is Broken (p.16).');
     const answerCall = client.calls.chat.find(({ params }) => params.inference_id === 'answer-ep');
-    assert.equal(answerCall.params.chat_completion_request.max_completion_tokens, 400);
+    assert.equal(answerCall.params.chat_completion_request.max_completion_tokens, ANSWER_MAX_TOKENS);
+    // The cap also has to cover reasoning; 400 left real answers empty or cut.
+    assert.ok(ANSWER_MAX_TOKENS >= 1000);
     assert.deepEqual(events[3].data, { cached: false });
     const llmCalls = client.calls.chat.length;
 
@@ -200,5 +202,16 @@ test('/api/answer rejects bad input before streaming and limits each IP', async 
     await (await fetch(base + Q)).text();
     const limited = await fetch(base + Q);
     assert.equal(limited.status, 429);
+  });
+});
+
+test('/api/answer says so when the model returns no visible text', async () => {
+  const client = fakeClient();
+  const original = client.inference.chatCompletionUnified;
+  client.inference.chatCompletionUnified = async (params, options) => (params.inference_id === 'answer-ep' ? sse([]) : original(params, options));
+  await withServer({ searchClient: client }, async (base) => {
+    const events = parseEvents(await (await fetch(base + Q.replace('at=', 'x=1&at='))).text());
+    assert.deepEqual(events.map((e) => e.event), ['results', 'notice', 'done']);
+    assert.match(events[1].data.message, /Couldn't write an answer/);
   });
 });

@@ -4,6 +4,11 @@
 const { streamChat } = require('./llm');
 
 const ANSWER_TIMEOUT_MS = 30_000;
+// The cap covers the model's reasoning as well as the visible answer. Measured
+// on Opus through Elasticsearch: 400 left a Korean answer empty (all spent on
+// reasoning) and cut an English one mid-sentence. 1,500 output tokens cost at
+// most about $0.03, which keeps an answer within the ~$0.05 the daily budget assumes.
+const ANSWER_MAX_TOKENS = 1500;
 const VENUE_TIME_ZONE = 'America/Denver';
 
 const SYSTEM_PROMPT = `You help attendees of KubeCon + CloudNativeCon North America 2026 pick talks.
@@ -71,7 +76,7 @@ function buildMessages(result) {
 }
 
 function writeAnswer(client, endpoint, result, { onDelta, signal } = {}) {
-  return streamChat(client, endpoint, buildMessages(result), { timeoutMs: ANSWER_TIMEOUT_MS, maxTokens: 400, onDelta, signal });
+  return streamChat(client, endpoint, buildMessages(result), { timeoutMs: ANSWER_TIMEOUT_MS, maxTokens: ANSWER_MAX_TOKENS, onDelta, signal });
 }
 
-module.exports = { writeAnswer, buildMessages, describe, SYSTEM_PROMPT };
+module.exports = { writeAnswer, buildMessages, describe, SYSTEM_PROMPT, ANSWER_MAX_TOKENS };
