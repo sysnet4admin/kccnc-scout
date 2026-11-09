@@ -1,6 +1,7 @@
 // Dash0 real-user monitoring for the phone UI: page views, navigation timing,
 // fetch calls (same-origin calls carry trace headers, so browser and server
 // spans join up) and errors, plus the app's own "kccnc.answer" events.
+// The question in ?q= is redacted from every URL the SDK records.
 //
 // The token is a separate, ingest-only token for one dataset. It ends up in
 // the page anyway, but it comes from the environment (Secret `dash0`, key
@@ -14,6 +15,22 @@ const DEFAULT_ENDPOINT = 'https://ingress.us-west-2.aws.dash0.com';
 // JSON that is safe inside an inline <script>.
 const scriptJson = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
 
+// Runs in the browser for every URL the SDK records (fetch calls, page views,
+// navigation timing): the question in ?q= becomes REDACTED, as on the server
+// (lib/redact.js). The SDK rebuilds url.full from the scrubbed parts.
+const URL_SCRUBBER = `function (a) {
+  try {
+    var query = a['url.query'];
+    if (!query) return a;
+    var params = new URLSearchParams(query);
+    if (!params.has('q')) return a;
+    params.set('q', 'REDACTED');
+    var out = Object.assign({}, a);
+    out['url.query'] = params.toString();
+    return out;
+  } catch (e) { return a; }
+}`;
+
 function rumSnippet({ token, endpoint = DEFAULT_ENDPOINT, dataset = 'default', version = 'dev' } = {}) {
   if (!token) return '';
   const config = {
@@ -25,10 +42,10 @@ function rumSnippet({ token, endpoint = DEFAULT_ENDPOINT, dataset = 'default', v
   return [
     '<script>',
     '(function (w, n) { if (w[n]) return; var q = []; var f = w[n] = function () { q.push(arguments); }; f._t = new Date(); f._v = 1; f._q = q; })(window, "dash0");',
-    `dash0("init", ${scriptJson(config)});`,
+    `dash0("init", Object.assign(${scriptJson(config)}, { urlAttributeScrubber: ${URL_SCRUBBER} }));`,
     '</script>',
     `<script defer crossorigin="anonymous" src="${SDK_URL}" integrity="${SDK_INTEGRITY}"></script>`,
   ].join('\n');
 }
 
-module.exports = { rumSnippet, SDK_URL, SDK_INTEGRITY };
+module.exports = { rumSnippet, SDK_URL, SDK_INTEGRITY, URL_SCRUBBER };
