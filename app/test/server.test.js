@@ -30,6 +30,14 @@ test('home page shows the running version', async () => {
   assert.match(await res.text(), /<p>version [^<]+<\/p>/);
 });
 
+test('home page is the phone UI that asks /api/answer', async () => {
+  const html = await (await fetch(base + '/')).text();
+  assert.match(html, /<meta name="viewport"/);
+  assert.match(html, /<form id="ask">/);
+  assert.match(html, /\/api\/answer/);
+  assert.doesNotMatch(html, /__VERSION__/);
+});
+
 test('sessions API returns JSON with a sessions list', async () => {
   const res = await fetch(base + '/api/sessions');
   assert.equal(res.status, 200);
