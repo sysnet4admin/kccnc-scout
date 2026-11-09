@@ -1,11 +1,14 @@
 {
-  "name": "cnh-starter",
+  "name": "kccnc-scout",
   "version": "1.0.0",
   "private": true,
-  "description": "Starter app for the Radar AI SRE track at the Cloud Native Hackathon",
+  "description": "Finds KubeCon + CloudNativeCon North America 2026 talks by reading their slides, in any language",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "test": "node --test"
+  },
+  "dependencies": {
+    "@elastic/elasticsearch": "9.5.1"
   }
 }
