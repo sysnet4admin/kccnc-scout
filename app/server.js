@@ -23,6 +23,17 @@ function sendJson(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+const hits = new Map();
+function allow(ip, limit = 20, windowMs = 60_000) {
+  const now = Date.now();
+  const entry = hits.get(ip);
+  if (!entry || now - entry.t > windowMs) {
+    hits.set(ip, { t: now, n: 1 });
+    return true;
+  }
+  return ++entry.n <= limit;
+}
+
 // GET /api/search?q=<question>[&at=<ISO time with offset>]
 async function handleSearch(res, url, client) {
   if (!client) return sendJson(res, 503, { error: 'search is not configured' });
@@ -59,6 +70,7 @@ function handle(req, res, client) {
     return res.end(JSON.stringify({ version, sessions }));
   }
   if (url.pathname === '/api/search' && req.method === 'GET') {
+    if (!allow(req.socket.remoteAddress)) return sendJson(res, 429, { error: 'too many requests' });
     return handleSearch(res, url, client);
   }
   if (url.pathname === '/') {
