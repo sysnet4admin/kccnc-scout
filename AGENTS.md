@@ -91,6 +91,12 @@ It reads the uploaded slide decks page by page, filters by what starts soon and 
 - Create credential Secrets outside git (see `examples/agent-workflows/README.md`). The app gets a read-only Elasticsearch API key and a Dash0 ingest token.
 - Never print a key, a token or a kubeconfig, and never commit one.
 
+### Observability
+
+- `app/instrumentation.js` starts OpenTelemetry before the app (the image runs `node --require ./instrumentation.js server.js`). Traces, metrics and logs go to Dash0 over OTLP; the endpoint, headers and service name are `OTEL_*` variables in `deploy/deployment.yaml`, and the token comes from Secret `dash0`.
+- Add every new route to `ROUTES` in `app/lib/telemetry.js`, so its spans are named `GET /api/...` instead of `GET`.
+- Log with `app/lib/log.js` (pino), not `console.log`: pino records carry trace ids and reach Dash0.
+
 ### Product rules
 
 - Phone first: a question box, the user's zone, and result cards.

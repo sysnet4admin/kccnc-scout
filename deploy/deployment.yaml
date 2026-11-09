@@ -25,13 +25,53 @@ spec:
           env:
             - name: TEAM_NAME
               value: "kccnc-scout"
+            # OpenTelemetry to Dash0. $(VAR) only expands variables defined
+            # above it in this list, so keep this order.
+            - name: K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: K8S_POD_UID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.uid
+            - name: K8S_NAMESPACE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: DASH0_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: dash0
+                  key: token
+            - name: OTEL_SERVICE_NAME
+              value: kccnc-scout
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "k8s.pod.name=$(K8S_POD_NAME),k8s.pod.uid=$(K8S_POD_UID),k8s.namespace.name=$(K8S_NAMESPACE_NAME),k8s.node.name=$(K8S_NODE_NAME),k8s.deployment.name=app,deployment.environment.name=hackathon"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: https://ingress.us-west-2.aws.dash0.com
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: http/protobuf
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              value: "Authorization=Bearer $(DASH0_TOKEN),Dash0-Dataset=default"
+            - name: OTEL_TRACES_EXPORTER
+              value: otlp
+            - name: OTEL_METRICS_EXPORTER
+              value: otlp
+            - name: OTEL_LOGS_EXPORTER
+              value: otlp
           resources:
             requests:
               cpu: 100m
               memory: 128Mi
             limits:
               cpu: 500m
-              memory: 256Mi
+              # The OpenTelemetry SDK adds to the starter's footprint.
+              memory: 384Mi
           readinessProbe:
             httpGet:
               path: /readyz
