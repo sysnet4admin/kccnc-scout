@@ -36,6 +36,8 @@ test('home page is the phone UI that asks /api/answer', async () => {
   assert.match(html, /<form id="ask">/);
   assert.match(html, /\/api\/answer/);
   assert.doesNotMatch(html, /__VERSION__/);
+  assert.doesNotMatch(html, /__ZONE_OPTIONS__/);
+  assert.match(html, /<option value="keynote">Keynote hall \(Hall DE\)<\/option>/);
 });
 
 test('sessions API returns JSON with a sessions list', async () => {

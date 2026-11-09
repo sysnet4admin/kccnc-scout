@@ -1,0 +1,322 @@
+{
+ "note": "Room positions for walking times. Prepared on 2026-11-07 from the public Salt Palace and Hyatt floor plans, the KubeCon venue and expo maps, and OpenStreetMap; not surveyed on site.",
+ "zones": [
+  {
+   "id": "keynote",
+   "label": "Keynote hall (Hall DE)",
+   "room": "82947"
+  },
+  {
+   "id": "expo",
+   "label": "Expo halls (Solutions Showcase)",
+   "room": "87451"
+  },
+  {
+   "id": "ballroom",
+   "label": "Grand Ballroom and 151 (Level 1)",
+   "room": "82950"
+  },
+  {
+   "id": "l2-east",
+   "label": "Level 2: rooms 250, 251, 254",
+   "room": "87421"
+  },
+  {
+   "id": "l2-north",
+   "label": "Level 2: rooms 255",
+   "room": "82953"
+  },
+  {
+   "id": "hyatt-low",
+   "label": "Hyatt lobby and Level 2",
+   "room": "82955"
+  },
+  {
+   "id": "hyatt-high",
+   "label": "Hyatt Levels 3 to 5 (Regency Ballroom)",
+   "room": "92181"
+  }
+ ],
+ "rooms": {
+  "90363": {
+   "name": "Salt Palace | Level 1 | Solutions Showcase | Halls 5 | Cosmic Canyon Zone",
+   "building": "salt-palace",
+   "level": 1,
+   "lat": 40.768113,
+   "lng": -111.898324,
+   "kind": "expo"
+  },
+  "82957": {
+   "name": "Hyatt Regency | Level 4 | Regency Ballroom B-D",
+   "building": "hyatt",
+   "level": 4,
+   "lat": 40.765726,
+   "lng": -111.894645,
+   "kind": "room"
+  },
+  "91537": {
+   "name": "Salt Palace | Level 1 | Solutions Showcase | Hall 1 | Alpine Overlook Zone | Demo Theater",
+   "building": "salt-palace",
+   "level": 1,
+   "lat": 40.768488,
+   "lng": -111.896123,
+   "kind": "expo"
+  },
+  "82947": {
+   "name": "Salt Palace | Level 1 | Hall DE",
+   "building": "salt-palace",
+   "level": 1,
+   "lat": 40.765989,
+   "lng": -111.895809,
+   "kind": "hall-de"
+  },
+  "87451": {
+   "name": "Salt Palace | Level 1 | Halls A-C, Halls 1-5",
+   "building": "salt-palace",
+   "level": 1,
+   "lat": 40.767853,
+   "lng": -111.897138,
+   "kind": "expo"
+  },
+  "90682": {
+   "name": "Salt Palace | Level 1 | Solutions Showcase | Hall 5 | Cosmic Canyon Zone | Project Pavilion",
+   "building": "salt-palace",
+   "level": 1,
+   "lat": 40.768264,
+   "lng": -111.898315,
+   "kind": "expo"
+  },
+  "92181": {
+   "name": "Hyatt Regency | Level 4 | Regency Ballroom CD",
+   "building": "hyatt",
+   "level": 4,
+   "lat": 40.765822,
+   "lng": -111.894645,
+   "kind": "room"
+  },
+  "82950": {
+   "name": "Salt Palace | Level 1 | Grand Ballroom H",
+   "building": "salt-palace",
+   "level": 1,
+   "lat": 40.766381,
+   "lng": -111.894937,
+   "kind": "room"
+  },
+  "87421": {
+   "name": "Salt Palace | Level 2 | 250 A-C",
+   "building": "salt-palace",
+   "level": 2,
+   "lat": 40.767267,
+   "lng": -111.894948,
+   "kind": "room"
+  },
+  "82952": {
+   "name": "Salt Palace | Level 1 | 151",
+   "building": "salt-palace",
+   "level": 1,
+   "lat": 40.767682,
+   "lng": -111.894982,
+   "kind": "room"
+  },
+  "82948": {
+   "name": "Salt Palace | Level 1 | Grand Ballroom ACE",
+   "building": "salt-palace",
+   "level": 1,
+   "lat": 40.766674,
+   "lng": -111.894628,
+   "kind": "room"
+  },
+  "82949": {
+   "name": "Salt Palace | Level 1 | Grand Ballroom BDF",
+   "building": "salt-palace",
+   "level": 1,
+   "lat": 40.766674,
+   "lng": -111.894937,
+   "kind": "room"
+  },
+  "87425": {
+   "name": "Salt Palace | Level 2 | 254",
+   "building": "salt-palace",
+   "level": 2,
+   "lat": 40.767941,
+   "lng": -111.895737,
+   "kind": "room"
+  },
+  "82953": {
+   "name": "Salt Palace | Level 2 | 255 BC",
+   "building": "salt-palace",
+   "level": 2,
+   "lat": 40.769024,
+   "lng": -111.896066,
+   "kind": "room"
+  },
+  "82955": {
+   "name": "Hyatt Regency | Level 2 | Salt Lake Ballroom C",
+   "building": "hyatt",
+   "level": 2,
+   "lat": 40.765688,
+   "lng": -111.89469,
+   "kind": "room"
+  },
+  "82951": {
+   "name": "Salt Palace | Level 1 | Grand Ballroom GI",
+   "building": "salt-palace",
+   "level": 1,
+   "lat": 40.766308,
+   "lng": -111.894628,
+   "kind": "room"
+  },
+  "87422": {
+   "name": "Salt Palace | Level 2 | 250 D-F",
+   "building": "salt-palace",
+   "level": 2,
+   "lat": 40.767405,
+   "lng": -111.894948,
+   "kind": "room"
+  },
+  "87423": {
+   "name": "Salt Palace | Level 2 | 251 A-C",
+   "building": "salt-palace",
+   "level": 2,
+   "lat": 40.767588,
+   "lng": -111.894948,
+   "kind": "room"
+  },
+  "87424": {
+   "name": "Salt Palace | Level 2 | 251 D-F",
+   "building": "salt-palace",
+   "level": 2,
+   "lat": 40.76773,
+   "lng": -111.894948,
+   "kind": "room"
+  },
+  "82954": {
+   "name": "Salt Palace | Level 2 | 255 EF",
+   "building": "salt-palace",
+   "level": 2,
+   "lat": 40.769024,
+   "lng": -111.896464,
+   "kind": "room"
+  },
+  "82956": {
+   "name": "Hyatt Regency | Level 2 | Salt Lake Ballroom DE",
+   "building": "hyatt",
+   "level": 2,
+   "lat": 40.765846,
+   "lng": -111.89469,
+   "kind": "room"
+  },
+  "90387": {
+   "name": "Salt Palace | Level 1 | Grand Ballroom J",
+   "building": "salt-palace",
+   "level": 1,
+   "lat": 40.766234,
+   "lng": -111.894937,
+   "kind": "room"
+  },
+  "92096": {
+   "name": "Salt Palace | Level 1 | Solutions Showcase | Hall B | Starlight Summit Zone",
+   "building": "salt-palace",
+   "level": 1,
+   "lat": 40.7668,
+   "lng": -111.8962,
+   "kind": "expo"
+  },
+  "82958": {
+   "name": "Hyatt Regency | Level 4 | Regency Ballroom A",
+   "building": "hyatt",
+   "level": 4,
+   "lat": 40.765445,
+   "lng": -111.894645,
+   "kind": "room"
+  },
+  "87426": {
+   "name": "Salt Palace | Level 2 | 255 A",
+   "building": "salt-palace",
+   "level": 2,
+   "lat": 40.76883,
+   "lng": -111.896066,
+   "kind": "room"
+  },
+  "92180": {
+   "name": "Hyatt Regency | Level 4 | Regency Ballroom B",
+   "building": "hyatt",
+   "level": 4,
+   "lat": 40.765638,
+   "lng": -111.894645,
+   "kind": "room"
+  },
+  "87427": {
+   "name": "Salt Palace | Level 2 | 255 D",
+   "building": "salt-palace",
+   "level": 2,
+   "lat": 40.76883,
+   "lng": -111.896464,
+   "kind": "room"
+  },
+  "87690": {
+   "name": "Salt Palace | 200 South Entrance (South)",
+   "building": "salt-palace",
+   "level": 1,
+   "lat": 40.76563,
+   "lng": -111.89518,
+   "kind": "room"
+  },
+  "92016": {
+   "name": "Salt Palace | Level 1 | Solutions Showcase | Hall 1 | Alpine Overlook Zone | Network Nook",
+   "building": "salt-palace",
+   "level": 1,
+   "lat": 40.768488,
+   "lng": -111.896491,
+   "kind": "expo"
+  },
+  "87691": {
+   "name": "Salt Palace | Level 2 | East Registration",
+   "building": "salt-palace",
+   "level": 2,
+   "lat": 40.767345,
+   "lng": -111.894549,
+   "kind": "room"
+  },
+  "88637": {
+   "name": "Hyatt Regency | Level 5 | Capitol Reef",
+   "building": "hyatt",
+   "level": 5,
+   "lat": 40.765742,
+   "lng": -111.894413,
+   "kind": "room"
+  },
+  "92005": {
+   "name": "Hyatt Regency Lobby",
+   "building": "hyatt",
+   "level": 1,
+   "lat": 40.76577,
+   "lng": -111.8947,
+   "kind": "room"
+  },
+  "92006": {
+   "name": "Hyatt Regency | Level 3 | Park City",
+   "building": "hyatt",
+   "level": 3,
+   "lat": 40.765244,
+   "lng": -111.894336,
+   "kind": "room"
+  },
+  "92007": {
+   "name": "Salt Palace | Level 1 | North Grand Ballroom Foyer",
+   "building": "salt-palace",
+   "level": 1,
+   "lat": 40.766973,
+   "lng": -111.894794,
+   "kind": "room"
+  },
+  "90804": {
+   "name": "Salt Palace | Level 2 | Upper Mezzanine",
+   "building": "salt-palace",
+   "level": 2,
+   "lat": 40.768616,
+   "lng": -111.897093,
+   "kind": "room"
+  }
+ }
+}

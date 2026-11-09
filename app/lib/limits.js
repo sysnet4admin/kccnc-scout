@@ -98,10 +98,10 @@ class DailyBudget {
   }
 }
 
-// Same question, same 5-minute slot: same answer.
-function cacheKey(question, atMs) {
+// Same question, same zone, same 5-minute slot: same answer.
+function cacheKey(question, atMs, zone = null) {
   const slot = Math.floor(atMs / 300_000);
-  return `${slot}|${question.toLowerCase()}`;
+  return `${slot}|${zone || '-'}|${question.toLowerCase()}`;
 }
 
 module.exports = { clientIp, RateLimiter, TtlCache, DailyBudget, cacheKey };
