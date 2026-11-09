@@ -83,6 +83,7 @@ It reads the uploaded slide decks page by page, filters by what starts soon and 
 - Sessions come from the official schedule page (Sessionize JSON). Times have no offset: they are America/Denver (MST, UTC-7). Store them with `-07:00` and never pass them to `new Date()` as is.
 - Slide decks are linked from the "Presentation Slides" answer. Page descriptions were generated before the event with Claude and are loaded at startup; new uploads are described as they appear.
 - Elasticsearch indices: `kccnc-scout-sessions` and `kccnc-scout-pages`. Search is hybrid: keyword search plus `semantic_text` (Jina embeddings) on sessions and slide pages, merged with reciprocal rank fusion.
+- Both names are aliases. `app/scripts/load-data.js` builds new timestamped indices from the schedule and the page descriptions, then swaps the aliases; run it from a laptop with an admin key (usage is in the file's header). Mappings and synonyms are in `app/lib/indices.js`, the document shape in `app/lib/schedule.js`.
 - LLM calls go through Elasticsearch inference endpoints. The endpoint names, the Elasticsearch URL and the API key come from environment variables and a Kubernetes Secret, never from the repo.
 
 ### Secrets
