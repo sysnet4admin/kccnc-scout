@@ -15,21 +15,34 @@ const DEFAULT_ENDPOINT = 'https://ingress.us-west-2.aws.dash0.com';
 // JSON that is safe inside an inline <script>.
 const scriptJson = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
 
-// Runs in the browser for every URL the SDK records (fetch calls, page views,
-// navigation timing): the question in ?q= becomes REDACTED, as on the server
-// (lib/redact.js). The SDK rebuilds url.full from the scrubbed parts.
-const URL_SCRUBBER = `function (a) {
-  try {
-    var query = a['url.query'];
-    if (!query) return a;
-    var params = new URLSearchParams(query);
-    if (!params.has('q')) return a;
-    params.set('q', 'REDACTED');
-    var out = Object.assign({}, a);
-    out['url.query'] = params.toString();
-    return out;
-  } catch (e) { return a; }
-}`;
+function scrubUrlAttributes(attributes) {
+  const scrubbed = { ...attributes };
+  for (const key of ['url.full', 'page.url.full']) {
+    const value = scrubbed[key];
+    if (typeof value !== 'string') continue;
+    try {
+      const url = new URL(value);
+      if (url.searchParams.has('q')) {
+        url.searchParams.set('q', 'REDACTED');
+        scrubbed[key] = url.toString();
+      }
+    } catch {}
+  }
+  for (const key of ['url.query', 'page.url.query']) {
+    const value = scrubbed[key];
+    if (typeof value !== 'string') continue;
+    const prefix = value.startsWith('?') ? '?' : '';
+    const query = new URLSearchParams(prefix ? value.slice(1) : value);
+    if (query.has('q')) {
+      query.set('q', 'REDACTED');
+      scrubbed[key] = prefix + query.toString();
+    }
+  }
+  return scrubbed;
+}
+
+// Serialize the self-contained callback for the browser SDK.
+const URL_SCRUBBER = scrubUrlAttributes.toString();
 
 function rumSnippet({ token, endpoint = DEFAULT_ENDPOINT, dataset = 'default', version = 'dev' } = {}) {
   if (!token) return '';
@@ -48,4 +61,4 @@ function rumSnippet({ token, endpoint = DEFAULT_ENDPOINT, dataset = 'default', v
   ].join('\n');
 }
 
-module.exports = { rumSnippet, SDK_URL, SDK_INTEGRITY, URL_SCRUBBER };
+module.exports = { rumSnippet, scrubUrlAttributes, SDK_URL, SDK_INTEGRITY, URL_SCRUBBER };
