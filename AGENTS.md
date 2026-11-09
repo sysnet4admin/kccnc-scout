@@ -85,6 +85,8 @@ It reads the uploaded slide decks page by page, filters by what starts soon and 
 - Elasticsearch indices: `kccnc-scout-sessions` and `kccnc-scout-pages`. Search is hybrid: keyword search plus `semantic_text` (Jina embeddings) on sessions and slide pages, merged with reciprocal rank fusion.
 - Both names are aliases. `app/scripts/load-data.js` builds new timestamped indices from the schedule and the page descriptions, then swaps the aliases; run it from a laptop with an admin key (usage is in the file's header). Mappings and synonyms are in `app/lib/indices.js`, the document shape in `app/lib/schedule.js`.
 - `GET /api/search?q=<question>[&at=<ISO time with offset>]` (`app/lib/search.js`): rewrites a non-ASCII question as an English query (`ES_TRANSLATE_ENDPOINT`, 2.5 s cap, falls back to the original words), runs hybrid search on sessions and slide pages, fuses them by rank, and groups talks into `now` (on or starting within 30 minutes), `later` and `past` relative to `at`. Time windows are code, not LLM output.
+- `GET /api/answer` (same parameters) streams server-sent events: `results` (the `/api/search` JSON), `delta` pieces of an answer written by `ES_ANSWER_ENDPOINT` from those results only (`app/lib/answer.js`), then `done`; `notice` when the answer is skipped, `error` on failure.
+- Public URL limits live in `app/lib/limits.js` and stay on: per-IP rate limits (client IP from `X-Forwarded-For`), a 10-minute cache for the same question in the same 5-minute slot, and daily caps on LLM answers and rewrites (`DAILY_ANSWER_BUDGET`, per pod).
 - LLM calls go through Elasticsearch inference endpoints. The endpoint names, the Elasticsearch URL and the API key come from environment variables and a Kubernetes Secret, never from the repo.
 
 ### Secrets
