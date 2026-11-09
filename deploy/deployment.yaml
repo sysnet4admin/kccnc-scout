@@ -72,16 +72,32 @@ spec:
               cpu: 500m
               # The OpenTelemetry SDK adds to the starter's footprint.
               memory: 384Mi
+          # Probe timings tolerate the multi-second stalls seen on a busy shared
+          # node (event loop stalls of 4-7 s on 2026-11-09). Readiness still takes
+          # a stalled pod out of the Service within about 15 s; liveness restarts
+          # it only after a minute of failures, since a restart doesn't help a
+          # pod that is starved of CPU.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 2
+            timeoutSeconds: 3
+            failureThreshold: 30
           readinessProbe:
             httpGet:
               path: /readyz
               port: http
             periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /healthz
               port: http
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
           securityContext:
             runAsNonRoot: true
             allowPrivilegeEscalation: false
