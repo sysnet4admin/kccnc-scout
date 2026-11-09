@@ -2,6 +2,8 @@
 // listening on $PORT and keep /healthz and /readyz, and the manifests in
 // deploy/ keep working.
 const http = require('node:http');
+const log = require('./lib/log');
+const { routeFor, nameRoute, shutdownTelemetry } = require('./lib/telemetry');
 
 const port = Number(process.env.PORT || 8080);
 const team = process.env.TEAM_NAME || 'your-team';
@@ -22,6 +24,7 @@ function handle(req, res) {
     res.writeHead(400, { 'content-type': 'text/plain' });
     return res.end('bad request\n');
   }
+  nameRoute(routeFor(url.pathname));
   if (url.pathname === '/healthz' || url.pathname === '/readyz') {
     res.writeHead(200, { 'content-type': 'text/plain' });
     return res.end('ok\n');
@@ -47,10 +50,14 @@ function createServer() {
 // their own server on a free port.
 if (require.main === module) {
   const server = createServer();
-  server.listen(port, () => console.log(`listening on :${port}, version ${version}`));
+  server.listen(port, () => log.info({ port, version }, 'listening'));
 
-  // Exit cleanly when Kubernetes stops the pod, so rollouts don't drop requests.
-  process.on('SIGTERM', () => server.close(() => process.exit(0)));
+  // Exit cleanly when Kubernetes stops the pod, so rollouts don't drop requests,
+  // and flush telemetry so the last spans and logs reach Dash0.
+  process.on('SIGTERM', () => {
+    log.info('SIGTERM received, shutting down');
+    server.close(() => shutdownTelemetry().finally(() => process.exit(0)));
+  });
 }
 
 module.exports = { createServer };
