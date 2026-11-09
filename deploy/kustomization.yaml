@@ -11,4 +11,4 @@ resources:
 images:
   - name: app
     newName: ghcr.io/sysnet4admin/kccnc-scout
-    newTag: ff9f9b8
+    newTag: 7f35363
