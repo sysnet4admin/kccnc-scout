@@ -221,7 +221,8 @@ __RUM__
     out.append(status);
     go.disabled = true;
     // What the attendee waited for, sent to Dash0 as a "kccnc.answer" event
-    // when RUM is on. No question text leaves the page this way.
+    // when RUM is on. The event carries no question text, and the URLs RUM
+    // records (this fetch, the page URL) have ?q= redacted (lib/rum.js).
     const t0 = performance.now();
     const timing = { resultsMs: null, firstWordMs: null, translated: false, talks: 0, cached: false, outcome: 'error' };
 
