@@ -123,6 +123,7 @@ function toCard(session, score, pages, at, zone) {
   return {
     walk,
     id: session.id,
+    room_id: session.room_id ?? null,
     title: session.title,
     start: session.start,
     end: session.end,
