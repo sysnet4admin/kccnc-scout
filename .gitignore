@@ -9,3 +9,7 @@
 node_modules/
 npm-debug.log*
 .DS_Store
+
+# Local agent notes and settings (never commit)
+CLAUDE.local.md
+.claude/settings.local.json
