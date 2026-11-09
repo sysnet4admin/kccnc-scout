@@ -40,7 +40,7 @@ The `deploy-safety` rule checks every change to `deploy/`, `argocd/`, workflows 
 
 **Radar** runs the app: a vcluster on the hackathon platform, deployed by Argo CD from this repo, operated through Radar's MCP server all day (applying the Argo CD Application, syncing, waiting for rollouts, reading resources and Prometheus). After the OpenTelemetry release one pod kept restarting. Radar's AI investigation first pointed at the release; with the evidence below it concluded the node was the cause (pre-installed pods I never changed were crash-looping on the same node, which the platform cordoned), so a rollback would fix the wrong layer. [#4](https://github.com/sysnet4admin/kccnc-scout/pull/4) made the health checks tolerate short stalls.
 
-**Dash0** receives traces, metrics and logs over OpenTelemetry ([`app/instrumentation.js`](app/instrumentation.js)): server spans named by route, Elasticsearch and LLM calls as child spans, pino logs with trace ids, and Node.js runtime metrics. During the restart incident, Agent0 compared the two pods from these runtime metrics: the event loop on the restarting pod stalled for up to 7.6 seconds with almost no load, while the same image on another node stayed under 35 ms. That pointed at the node.
+**Dash0** receives traces, metrics and logs over OpenTelemetry ([`app/instrumentation.js`](app/instrumentation.js)): server spans named by route, Elasticsearch and LLM calls as child spans, pino logs with trace ids, and Node.js runtime metrics. The phone UI sends real-user monitoring (page views, fetch calls joined to the server traces, errors) and a `kccnc.answer` event per question with the time to results and to the first word. During the restart incident, Agent0 compared the two pods from these runtime metrics: the event loop on the restarting pod stalled for up to 7.6 seconds with almost no load, while the same image on another node stayed under 35 ms. That pointed at the node.
 
 ## Run it yourself
 
@@ -97,7 +97,7 @@ kubectl -n team-<team> create secret generic dash0 --from-file=token=<Dash0 inge
 
 ## Limits on the public URL
 
-The URL is open to anyone, so ([`app/lib/limits.js`](app/lib/limits.js)): per-IP rate limits (search 20 per minute, answers 10 per 10 minutes), a 10-minute cache for the same question in the same 5-minute slot, output-token caps on every LLM call, and a daily cap on written answers. When the cap is reached, the app keeps answering with search results only. The app keeps no database of questions and its logs hold timings and counts, but the request URL, question included, is part of the traces sent to Dash0.
+The URL is open to anyone, so ([`app/lib/limits.js`](app/lib/limits.js)): per-IP rate limits (search 20 per minute, answers 10 per 10 minutes), a 10-minute cache for the same question in the same 5-minute slot, output-token caps on every LLM call, and a daily cap on written answers. When the cap is reached, the app keeps answering with search results only. Questions are not stored: logs hold timings and counts, and the question in `?q=` is replaced with `REDACTED` in every URL recorded by the server traces and by browser monitoring ([`app/lib/redact.js`](app/lib/redact.js), [`app/lib/rum.js`](app/lib/rum.js)).
 
 ## How this was built
 
