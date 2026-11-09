@@ -6,3 +6,5 @@
 **/.env.*
 **/*.pem
 **/*.key
+# Tests run in CI, not in the image.
+app/test

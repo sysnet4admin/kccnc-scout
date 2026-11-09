@@ -4,7 +4,7 @@ This repo deploys to this team's own Kubernetes cluster at the Cloud Native Hack
 
 **Pass `cluster` on every Radar call.** The organization has about 40 team clusters plus `cnh`, the platform's cluster, where teams have no access. Call `list_clusters` once per session, take the `id` of the entry whose `name` is exactly `kccnc-scout`, and pass that id as `cluster` on every other Radar tool call. With this many clusters the tools can't pick a default. The person only has access to this team's cluster; never call a tool against `cnh` or another team's cluster. Pass `namespace: team-kccnc-scout` wherever a tool takes it, unless you mean another namespace in this cluster.
 
-Deploys are GitOps: change the repo, push to `main`, and Argo CD syncs the namespace. Pushing to `main` is how you deploy here, so when the person asks you to ship, fix, add or change something, that's the go-ahead to commit and push it; ask first only about changes they didn't ask for. Argo CD runs inside this cluster (namespace `argocd`) with no web UI; you drive it with `manage_gitops`. Your Argo CD Application `app` lives in `team-kccnc-scout`, not in `argocd`: pass that namespace when you look it up, sync it or `diagnose` it. Don't apply or patch app manifests on the cluster. Argo CD's self-heal puts the repo's version back. Apply `argocd/application.yaml` once to start the sync. One-off Jobs and credential Secrets deliberately kept outside git can also be created directly when Argo CD does not own them; follow `examples/agent-workflows/README.md`.
+Deploys are GitOps: change the repo, push to `main`, and Argo CD syncs the namespace. Pushing to `main` is how you deploy here. In this repo every change after the initial setup reaches `main` through a pull request (see "How changes land" at the end), so when the person asks you to ship, fix, add or change something, that's the go-ahead to open the pull request and to merge it once CI and the Gitar review pass; ask first only about changes they didn't ask for. Argo CD runs inside this cluster (namespace `argocd`) with no web UI; you drive it with `manage_gitops`. Your Argo CD Application `app` lives in `team-kccnc-scout`, not in `argocd`: pass that namespace when you look it up, sync it or `diagnose` it. Don't apply or patch app manifests on the cluster. Argo CD's self-heal puts the repo's version back. Apply `argocd/application.yaml` once to start the sync. One-off Jobs and credential Secrets deliberately kept outside git can also be created directly when Argo CD does not own them; follow `examples/agent-workflows/README.md`.
 
 **Run shell commands one at a time, in plain form.** Claude Code asks the person to approve any command with `$(…)`, `$?` or shell variables, so avoid them: run `git rev-parse HEAD` on its own and use the SHA it prints in the next command; `gh run watch <id> --exit-status` already fails when the run fails, so don't echo `$?`; run `git pull --rebase` as its own command. Write and edit files with your file tools, not heredocs.
 
@@ -62,3 +62,41 @@ Every team's cluster shows these. None is the team's to fix. Don't spend an AI i
 ## Application workflows
 
 Read [`examples/agent-workflows/README.md`](examples/agent-workflows/README.md) before adding credentials, one-off Jobs or dependencies. Discover the live MCP catalog before assuming an optional or newly added tool is available.
+
+## kccnc-scout
+
+This section is about the app built on top of the starter. The notes above still apply.
+
+kccnc-scout answers attendee questions about KubeCon + CloudNativeCon North America 2026 talks in any language.
+It reads the uploaded slide decks page by page, filters by what starts soon and how far the walk is, and cites the slide pages behind each pick.
+
+### How changes land
+
+- Every feature goes in as a pull request labeled `gitar-managed`, reviewed by Gitar. Merging to `main` deploys it.
+- Only the initial setup commits (ignore rules, MCP config and `scripts/setup.sh`) went straight to `main`.
+- Wait for CI and the Gitar review before merging. Fix what Gitar blocks instead of overriding it.
+- Gitar's setup lives in the repo: review instructions in `.gitar/review/`, repository rules in `.gitar/rules/`, and the auto-apply scope in `.gitar/config/apply.md`.
+- CI (`.github/workflows/ci.yml`) runs `npm test` in `app/` on every pull request. Keep it under two minutes and mock Elasticsearch in tests.
+
+### Data
+
+- Sessions come from the official schedule page (Sessionize JSON). Times have no offset: they are America/Denver (MST, UTC-7). Store them with `-07:00` and never pass them to `new Date()` as is.
+- Slide decks are linked from the "Presentation Slides" answer. Page descriptions were generated before the event with Claude and are loaded at startup; new uploads are described as they appear.
+- Elasticsearch indices: `kccnc-scout-sessions` and `kccnc-scout-pages`. Search is hybrid: keyword search plus `semantic_text` (Jina embeddings) on sessions and slide pages, merged with reciprocal rank fusion.
+- LLM calls go through Elasticsearch inference endpoints. The endpoint names, the Elasticsearch URL and the API key come from environment variables and a Kubernetes Secret, never from the repo.
+
+### Secrets
+
+- Create credential Secrets outside git (see `examples/agent-workflows/README.md`). The app gets a read-only Elasticsearch API key and a Dash0 ingest token.
+- Never print a key, a token or a kubeconfig, and never commit one.
+
+### Product rules
+
+- Phone first: a question box, the user's zone, and result cards.
+- The user's location is a zone (seven zones across the Salt Palace and the Hyatt), not coordinates. Only the zone name goes to the server.
+- The public URL is open to anyone: keep the per-IP rate limit, the answer cache and the daily LLM budget in place.
+- Past sessions are never recommended; they are listed at the end as "watch later".
+
+### Disclosure
+
+This project was built with Claude Code as the coding assistant. The README must say so, and say which data was prepared before the event.
