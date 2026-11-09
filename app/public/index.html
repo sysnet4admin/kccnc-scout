@@ -150,6 +150,13 @@ __RUM__
   }
   const safeLink = (url) => (typeof url === 'string' && /^https?:\/\//.test(url) ? url : null);
 
+  // The model sometimes marks bold text with **...** despite the plain-text
+  // prompt. Show those parts in bold instead of printing the asterisks; every
+  // part stays a text node, never HTML.
+  function renderAnswerText(node, raw) {
+    node.replaceChildren(...raw.split('**').map((part, i) => (i % 2 ? el('strong', {}, part) : part)));
+  }
+
   function when(card) {
     if (card.status === 'live') return ['live', `on now, ${card.minutesLeft} min left`];
     if (card.status === 'soon') return ['soon', `in ${card.startsInMinutes} min`];
@@ -246,6 +253,7 @@ __RUM__
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let answerRaw = '';
       for (;;) {
         const { value, done } = await reader.read();
         if (done) break;
@@ -267,7 +275,8 @@ __RUM__
           } else if (event === 'delta') {
             if (timing.firstWordMs === null) timing.firstWordMs = Math.round(performance.now() - t0);
             if (text.dataset.waiting) { text.textContent = ''; delete text.dataset.waiting; }
-            text.textContent += data.text;
+            answerRaw += data.text;
+            renderAnswerText(text, answerRaw);
           } else if (event === 'notice' || event === 'error') {
             timing.outcome = event;
             if (!answerBox.isConnected) { status.textContent = data.message; continue; }
